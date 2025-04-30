@@ -21,7 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 @Route("/edit_study")
-@CssImport("./Components/Styles.css")
+//@CssImport("./components/styles.css")
 public class EditStudy extends HorizontalLayout {
     Grid<Study> grid = new Grid();
     TextField filterName = new TextField();
