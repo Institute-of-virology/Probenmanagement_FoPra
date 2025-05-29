@@ -1,0 +1,49 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <proxies>
+    <proxy>
+      <id>unimarburg-proxy</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>www-proxy2.uni-marburg.de</host>
+      <port>3128</port>
+      <nonProxyHosts>localhost|127.0.0.1</nonProxyHosts>
+    </proxy>
+  </proxies>
+
+  <servers>
+    <!-- Optional: Add if you deploy artifacts -->
+  </servers>
+
+  <mirrors>
+    <!-- Optional: Add if you use custom mirrors -->
+  </mirrors>
+
+  <profiles>
+    <profile>
+      <id>default</id>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+        <repository>
+          <id>vaadin-addons</id>
+          <url>https://maven.vaadin.com/vaadin-addons</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>default</activeProfile>
+  </activeProfiles>
+
+</settings>

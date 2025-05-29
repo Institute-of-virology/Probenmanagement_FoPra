@@ -15,7 +15,11 @@ services:
       - app-network
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        http_proxy: http://www-proxy2.uni-marburg.de:3128
+        https_proxy: http://www-proxy2.uni-marburg.de:3128
     ports:
       - "8080:8080"
     environment:
