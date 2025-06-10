@@ -9,13 +9,14 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import de.unimarburg.samplemanagement.UI.Main;
-import de.unimarburg.samplemanagement.UI.analyses.UserCreationView;
+import de.unimarburg.samplemanagement.UI.User.UserCreationView;
 import de.unimarburg.samplemanagement.UI.general_info.EditAddresses;
 import de.unimarburg.samplemanagement.UI.sample.SampleView;
 import de.unimarburg.samplemanagement.UI.study.StudiesView;
 import de.unimarburg.samplemanagement.model.Study;
 import de.unimarburg.samplemanagement.model.User;
 import de.unimarburg.samplemanagement.repository.UserRepository;
+import lombok.Setter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.vaadin.flow.server.VaadinService;
@@ -25,12 +26,9 @@ import java.util.Optional;
 
 public class SIDEBAR_FACTORY {
 
-    private static UserRepository userRepository;
-
     // Setter or inject UserRepository for fetching username from email
-    public static void setUserRepository(UserRepository repo) {
-        userRepository = repo;
-    }
+    @Setter
+    private static UserRepository userRepository;
 
     public static VerticalLayout getSidebar(Study study) {
         SideNav genNav = new SideNav();
@@ -39,14 +37,14 @@ public class SIDEBAR_FACTORY {
         SideNavItem studies = new SideNavItem("Studies", StudiesView.class, VaadinIcon.BOOK.create());
         SideNavItem samples = new SideNavItem("Samples", SampleView.class, VaadinIcon.BARCODE.create());
         SideNavItem editAddress = new SideNavItem("Base-data", EditAddresses.class, VaadinIcon.MAILBOX.create());
-        genNav.addItem(home, studies, samples, editAddress);
+        SideNavItem addUser = new SideNavItem("Add User", UserCreationView.class, VaadinIcon.USER.create());
+        genNav.addItem(home, studies, samples, editAddress, addUser);
 
         // Add "Add User" for admins only
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isAdmin = auth != null && auth.getAuthorities().stream()
                 .anyMatch(ga -> ga.getAuthority().equals("ROLE_ADMIN"));
         if (isAdmin) {
-            SideNavItem addUser = new SideNavItem("Add User", UserCreationView.class, VaadinIcon.USER.create());
             genNav.addItem(addUser);
         }
 
