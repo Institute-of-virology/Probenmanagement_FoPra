@@ -37,3 +37,6 @@ build/
 ### vaadin ###
 frontend/
 src/main/bundles
+
+### application properties ###
+application.properties

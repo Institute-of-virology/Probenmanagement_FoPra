@@ -1,0 +1,25 @@
+spring.application.name=sample-management
+spring.profiles.active=dev
+vaadin.launch-browser=true
+
+# Database configuration
+spring.jpa.database=postgresql
+// Database connection properties (set localhost for local debugging)
+spring.datasource.url=jdbc:postgresql://localhost:5432/sample_management
+spring.datasource.username=${DB_USER:postgres}
+spring.datasource.password=${DB_PASSWORD:postgres}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.open-in-view=true
+spring.jpa.show-sql=true
+spring.sql.init.data-locations=classpath:/data.sql
+spring.sql.init.mode=always
+spring.jpa.defer-datasource-initialization=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+sendgrid.api.key=
+app.magiclink.sender-email=
+
+server.port=8080
