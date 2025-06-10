@@ -1,1 +1,4 @@
 /.idea/
+
+### application properties ###
+sample-management/src/main/resources/application.properties
