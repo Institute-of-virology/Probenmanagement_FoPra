@@ -3,6 +3,7 @@ package de.unimarburg.samplemanagement.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.Set;
 
 @Entity
@@ -26,6 +27,31 @@ public class User {
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<String> roles;
 
-    // getters/setters
-}
+    /**
+     * One-time token for magic link login
+     */
+    @Column(name = "otp_token")
+    private String oneTimeToken;
 
+    /**
+     * When the OTP token will expire (epoch timestamp)
+     */
+    @Column(name = "otp_token_expiry")
+    private Instant oneTimeTokenExpiry;
+
+    // Optional: store last login time
+    @Column(name = "last_login")
+    private Instant lastLogin;
+
+    public boolean isOtpTokenValid(String token) {
+        return this.oneTimeToken != null &&
+                this.oneTimeToken.equals(token) &&
+                this.oneTimeTokenExpiry != null &&
+                Instant.now().isBefore(this.oneTimeTokenExpiry);
+    }
+
+    public void clearOtpToken() {
+        this.oneTimeToken = null;
+        this.oneTimeTokenExpiry = null;
+    }
+}

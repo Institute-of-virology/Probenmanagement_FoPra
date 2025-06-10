@@ -1,5 +1,8 @@
 package de.unimarburg.samplemanagement.security;
 
+import de.unimarburg.samplemanagement.model.User;
+import de.unimarburg.samplemanagement.repository.UserRepository;
+import de.unimarburg.samplemanagement.service.SendGridMagicLinkEmailService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,19 +19,43 @@ import java.io.IOException;
 public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTokenGenerationSuccessHandler {
 
     private final OneTimeTokenGenerationSuccessHandler redirectHandler = new RedirectOneTimeTokenGenerationSuccessHandler("/");
+    private final UserRepository userRepository;   // Inject this
+    private final SendGridMagicLinkEmailService emailService;       // Your email sender service
+
+    public MagicLinkOneTimeTokenGenerationSuccessHandler(UserRepository userRepository, SendGridMagicLinkEmailService emailService) {
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+    }
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, OneTimeToken oneTimeToken) throws IOException, ServletException {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(UrlUtils.buildFullRequestUrl(request))
-                .replacePath(request.getContextPath())
-                .replaceQuery(null)
-                .fragment(null)
-                .path("/login/ott")
-                .queryParam("token", oneTimeToken.getTokenValue());
-        String magicLink = builder.toUriString();
+        String username = request.getParameter("username");
+        if (username == null || username.isEmpty()) {
+            throw new ServletException("Username parameter is missing");
+        }
 
-        System.out.println(magicLink);
+        // Lookup user by username
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ServletException("User not found for username: " + username));
 
-        this.redirectHandler.handle(request, response, oneTimeToken);
+        String email = user.getEmail();
+        if (email == null || email.isEmpty()) {
+            throw new ServletException("Email not found for username: " + username);
+        }
+
+        String magicLink = UriComponentsBuilder.fromHttpUrl(request.getRequestURL().toString())
+                .replacePath(request.getContextPath() + "/login/ott")
+                .queryParam("token", oneTimeToken.getTokenValue())
+                .toUriString();
+
+        try {
+            emailService.sendMagicLink(email, magicLink);
+        } catch (Exception e) {
+            throw new ServletException("Failed to send magic link email", e);
+        }
+
+        response.getWriter().write("Magic link sent to " + email);
+        response.setStatus(HttpServletResponse.SC_OK);
     }
 }
+
