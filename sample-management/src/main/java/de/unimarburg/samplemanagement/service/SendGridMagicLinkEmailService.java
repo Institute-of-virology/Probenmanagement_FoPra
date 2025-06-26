@@ -4,6 +4,7 @@ import com.sendgrid.*;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
+import org.apache.http.HttpHost;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URI;
 
 @Service
 public class SendGridMagicLinkEmailService {
@@ -28,7 +30,6 @@ public class SendGridMagicLinkEmailService {
 
     public void sendMagicLink(String toEmail, String magicLink) throws IOException {
         Email from = new Email(senderEmail);
-        System.out.println("Sender Email: " + senderEmail);
         String subject = "Your Secure Login Link from Sample Management System";
         Email to = new Email(toEmail);
 
@@ -84,15 +85,12 @@ public class SendGridMagicLinkEmailService {
         Mail mail = new Mail(from, subject, to, content);
         Request request = new Request();
 
-        System.out.println("Sending magic link email to: " + toEmail);
-
         try {
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
-            System.out.println("Request Started: " + request.getMethod() + " " + request.getEndpoint());
-            Response response = sendGridClient.api(request);
 
+            Response response = sendGridClient.api(request);
             if (response.getStatusCode() >= 400) {
                 throw new IOException("Failed to send email. Response code: " + response.getStatusCode());
             }
@@ -103,28 +101,43 @@ public class SendGridMagicLinkEmailService {
         }
     }
 
-    // Custom Client subclass to set HTTP timeouts
     private static class CustomSendGridClient extends Client {
-
         public CustomSendGridClient() {
             super();
 
-            RequestConfig config = RequestConfig.custom()
-                    .setConnectTimeout(10_000)        // 10 seconds connect timeout
-                    .setSocketTimeout(10_000)         // 10 seconds socket timeout
-                    .setConnectionRequestTimeout(10_000) // 10 seconds connection request timeout
-                    .build();
+            // Get proxy from env
+            String proxyEnv = System.getenv("http_proxy");
+
+            HttpHost proxy = null;
+            if (proxyEnv != null && proxyEnv.startsWith("http://")) {
+                try {
+                    URI uri = new URI(proxyEnv);
+                    proxy = new HttpHost(uri.getHost(), uri.getPort());
+                    System.out.println("Using proxy: " + proxy);
+                } catch (Exception e) {
+                    throw new RuntimeException("Invalid http_proxy format", e);
+                }
+            }
+
+            RequestConfig.Builder configBuilder = RequestConfig.custom()
+                    .setConnectTimeout(10_000)
+                    .setSocketTimeout(10_000)
+                    .setConnectionRequestTimeout(10_000);
+
+            if (proxy != null) {
+                configBuilder.setProxy(proxy);
+            }
 
             CloseableHttpClient httpClient = HttpClients.custom()
-                    .setDefaultRequestConfig(config)
+                    .setDefaultRequestConfig(configBuilder.build())
                     .build();
 
             try {
                 var httpClientField = Client.class.getDeclaredField("httpClient");
                 httpClientField.setAccessible(true);
                 httpClientField.set(this, httpClient);
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                throw new RuntimeException("Failed to set custom HttpClient with timeout", e);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set custom HttpClient", e);
             }
         }
     }
