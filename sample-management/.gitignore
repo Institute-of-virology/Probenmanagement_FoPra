@@ -40,3 +40,6 @@ src/main/bundles
 
 ### application properties ###
 src/main/resources/application.properties
+
+### Secrets ###
+src/main/resources/secrets.properties
