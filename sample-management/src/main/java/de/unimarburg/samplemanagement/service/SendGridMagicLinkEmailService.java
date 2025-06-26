@@ -4,6 +4,9 @@ import com.sendgrid.*;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +21,8 @@ public class SendGridMagicLinkEmailService {
     private String senderEmail;
 
     public SendGridMagicLinkEmailService(@Value("${sendgrid.api.key}") String sendGridApiKey) {
-        this.sendGridClient = new SendGrid(sendGridApiKey);
+        Client customClient = new CustomSendGridClient();
+        this.sendGridClient = new SendGrid(sendGridApiKey, customClient);
         System.out.println("SendGrid API Key: " + sendGridApiKey);
     }
 
@@ -99,4 +103,29 @@ public class SendGridMagicLinkEmailService {
         }
     }
 
+    // Custom Client subclass to set HTTP timeouts
+    private static class CustomSendGridClient extends Client {
+
+        public CustomSendGridClient() {
+            super();
+
+            RequestConfig config = RequestConfig.custom()
+                    .setConnectTimeout(10_000)        // 10 seconds connect timeout
+                    .setSocketTimeout(10_000)         // 10 seconds socket timeout
+                    .setConnectionRequestTimeout(10_000) // 10 seconds connection request timeout
+                    .build();
+
+            CloseableHttpClient httpClient = HttpClients.custom()
+                    .setDefaultRequestConfig(config)
+                    .build();
+
+            try {
+                var httpClientField = Client.class.getDeclaredField("httpClient");
+                httpClientField.setAccessible(true);
+                httpClientField.set(this, httpClient);
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new RuntimeException("Failed to set custom HttpClient with timeout", e);
+            }
+        }
+    }
 }
