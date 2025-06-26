@@ -17,6 +17,14 @@ RUN mvn clean package -Pproduction -DskipTests
 
 # Stage 2: Run the built JAR
 FROM openjdk:17-jdk-slim
+# Accept proxy settings as build args
+ARG http_proxy
+ARG https_proxy
+# Accept proxy settings as build args for Runtime
+ENV http_proxy=${http_proxy}
+ENV https_proxy=${https_proxy}
+ENV HTTP_PROXY=${http_proxy}
+ENV HTTPS_PROXY=${https_proxy}
 WORKDIR /app
 COPY --from=builder /app/target/sample-management-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
