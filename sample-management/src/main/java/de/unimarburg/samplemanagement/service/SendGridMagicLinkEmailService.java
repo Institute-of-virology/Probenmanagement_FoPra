@@ -78,10 +78,13 @@ public class SendGridMagicLinkEmailService {
         Mail mail = new Mail(from, subject, to, content);
         Request request = new Request();
 
+        System.out.println("Sending magic link email to: " + toEmail);
+
         try {
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
             request.setBody(mail.build());
+            System.out.println("Request Started: " + request.getMethod() + " " + request.getEndpoint());
             Response response = sendGridClient.api(request);
 
             if (response.getStatusCode() >= 400) {

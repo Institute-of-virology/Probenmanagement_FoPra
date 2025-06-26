@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTokenGenerationSuccessHandler {
@@ -50,12 +51,16 @@ public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTok
                 .replacePath(request.getContextPath() + "/login/ott")
                 .queryParam("token", oneTimeToken.getTokenValue())
                 .toUriString();
+        System.out.println("magic link: " + magicLink);
+        System.out.println("email: " + email);
 
-        try {
-            emailService.sendMagicLink(email, magicLink);
-        } catch (Exception e) {
-            throw new ServletException("Failed to send magic link email", e);
-        }
+        CompletableFuture.runAsync(() -> {
+            try {
+                emailService.sendMagicLink(email, magicLink);
+            } catch (Exception e) {
+                e.printStackTrace(); // Log it safely
+            }
+        });
 
         // Set content type to HTML
         response.setContentType("text/html;charset=UTF-8");
