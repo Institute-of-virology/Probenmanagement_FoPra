@@ -19,10 +19,12 @@ public class SendGridMagicLinkEmailService {
 
     public SendGridMagicLinkEmailService(@Value("${sendgrid.api.key}") String sendGridApiKey) {
         this.sendGridClient = new SendGrid(sendGridApiKey);
+        System.out.println("SendGrid API Key: " + sendGridApiKey);
     }
 
     public void sendMagicLink(String toEmail, String magicLink) throws IOException {
         Email from = new Email(senderEmail);
+        System.out.println("Sender Email: " + senderEmail);
         String subject = "Your Secure Login Link from Sample Management System";
         Email to = new Email(toEmail);
 
