@@ -23,13 +23,58 @@ public class SendGridMagicLinkEmailService {
 
     public void sendMagicLink(String toEmail, String magicLink) throws IOException {
         Email from = new Email(senderEmail);
-        String subject = "Your Magic Login Link";
+        String subject = "Your Secure Login Link from Sample Management System";
         Email to = new Email(toEmail);
-        Content content = new Content("text/html",
-                "<p>Click the link below to login:</p>" +
-                        "<p><a href=\"" + magicLink + "\">" + magicLink + "</a></p>" +
-                        "<br><p>If you didn't request this, please ignore this email.</p>");
 
+        String htmlContent = """
+        <html>
+        <head>
+            <style>
+                .container {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border-radius: 8px;
+                    max-width: 600px;
+                    margin: auto;
+                    color: #333;
+                }
+                .button {
+                    display: inline-block;
+                    padding: 12px 20px;
+                    margin-top: 20px;
+                    font-size: 16px;
+                    color: #fff;
+                    background-color: #007BFF;
+                    text-decoration: none;
+                    border-radius: 5px;
+                }
+                .footer {
+                    margin-top: 30px;
+                    font-size: 12px;
+                    color: #777;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2>Welcome to Sample Management System</h2>
+                <p>Hello,</p>
+                <p>You recently requested a secure login link to log in.</p>
+                <p>Click the button below to securely log into your account:</p>
+                <a href="%s" class="button">Log In Now</a>
+                <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                <p><a href="%s">%s</a></p>
+                <p class="footer">
+                    If you did not request this email, you can safely ignore it.<br/>
+                    &copy; 2025 Sample Management System - University of Marburg
+                </p>
+            </div>
+        </body>
+        </html>
+        """.formatted(magicLink, magicLink, magicLink);
+
+        Content content = new Content("text/html", htmlContent);
         Mail mail = new Mail(from, subject, to, content);
         Request request = new Request();
 
@@ -46,4 +91,5 @@ public class SendGridMagicLinkEmailService {
             throw ex;
         }
     }
+
 }

@@ -6,6 +6,7 @@ import de.unimarburg.samplemanagement.service.SendGridMagicLinkEmailService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.ott.OneTimeToken;
 import org.springframework.security.web.authentication.ott.OneTimeTokenGenerationSuccessHandler;
 import org.springframework.security.web.authentication.ott.RedirectOneTimeTokenGenerationSuccessHandler;
@@ -17,6 +18,9 @@ import java.io.IOException;
 
 @Component
 public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTokenGenerationSuccessHandler {
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     private final OneTimeTokenGenerationSuccessHandler redirectHandler = new RedirectOneTimeTokenGenerationSuccessHandler("/");
     private final UserRepository userRepository;   // Inject this
@@ -42,7 +46,7 @@ public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTok
             throw new ServletException("Email not found for username: " + username);
         }
 
-        String magicLink = UriComponentsBuilder.fromHttpUrl(request.getRequestURL().toString())
+        String magicLink = UriComponentsBuilder.fromHttpUrl(baseUrl)
                 .replacePath(request.getContextPath() + "/login/ott")
                 .queryParam("token", oneTimeToken.getTokenValue())
                 .toUriString();
@@ -75,7 +79,7 @@ public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTok
                         "<body>" +
                         "  <div class='container'>" +
                         "    <h1>Check your email!</h1>" +
-                        "    <p>A magic login link has been sent to <strong>" + email + "</strong>.</p>" +
+                        "    <p>A login link has been sent to <strong>" + email + "</strong>.</p>" +
                         "    <p>Please follow the link in the email to log in.</p>" +
                         "    <p>You can now close this window.</p>" +
                         "  </div>" +
