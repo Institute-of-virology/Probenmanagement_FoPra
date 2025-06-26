@@ -43,7 +43,7 @@ public class SIDEBAR_FACTORY {
         // Add "Add User" for admins only
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isAdmin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(ga -> ga.getAuthority().equals("ROLE_ADMIN"));
+                .anyMatch(ga -> ga.getAuthority().equals("ADMIN"));
         if (isAdmin) {
             genNav.addItem(addUser);
         }
