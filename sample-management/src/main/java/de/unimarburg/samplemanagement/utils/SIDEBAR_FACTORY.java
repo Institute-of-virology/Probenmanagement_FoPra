@@ -38,12 +38,12 @@ public class SIDEBAR_FACTORY {
         SideNavItem samples = new SideNavItem("Samples", SampleView.class, VaadinIcon.BARCODE.create());
         SideNavItem editAddress = new SideNavItem("Base-data", EditAddresses.class, VaadinIcon.MAILBOX.create());
         SideNavItem addUser = new SideNavItem("Add User", UserCreationView.class, VaadinIcon.USER.create());
-        genNav.addItem(home, studies, samples, editAddress, addUser);
+        genNav.addItem(home, studies, samples, editAddress);
 
         // Add "Add User" for admins only
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isAdmin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(ga -> ga.getAuthority().equals("ADMIN"));
+                .anyMatch(ga -> ga.getAuthority().equals("ROLE_ADMIN"));
         if (isAdmin) {
             genNav.addItem(addUser);
         }

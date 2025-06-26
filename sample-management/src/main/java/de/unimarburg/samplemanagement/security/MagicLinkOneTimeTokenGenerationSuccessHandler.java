@@ -34,7 +34,6 @@ public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTok
             throw new ServletException("Username parameter is missing");
         }
 
-        // Lookup user by username
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ServletException("User not found for username: " + username));
 
@@ -54,8 +53,35 @@ public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTok
             throw new ServletException("Failed to send magic link email", e);
         }
 
-        response.getWriter().write("Magic link sent to " + email);
+        // Set content type to HTML
+        response.setContentType("text/html;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_OK);
+
+        // Write a simple HTML confirmation page
+        response.getWriter().write(
+                "<!DOCTYPE html>" +
+                        "<html lang='en'>" +
+                        "<head>" +
+                        "  <meta charset='UTF-8'>" +
+                        "  <meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                        "  <title>Magic Link Sent</title>" +
+                        "  <style>" +
+                        "    body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }" +
+                        "    .container { background: white; padding: 2em 3em; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }" +
+                        "    h1 { color: #4CAF50; }" +
+                        "    p { margin-top: 1em; font-size: 1.1em; }" +
+                        "  </style>" +
+                        "</head>" +
+                        "<body>" +
+                        "  <div class='container'>" +
+                        "    <h1>Check your email!</h1>" +
+                        "    <p>A magic login link has been sent to <strong>" + email + "</strong>.</p>" +
+                        "    <p>Please follow the link in the email to log in.</p>" +
+                        "    <p>You can now close this window.</p>" +
+                        "  </div>" +
+                        "</body>" +
+                        "</html>"
+        );
     }
 }
 
