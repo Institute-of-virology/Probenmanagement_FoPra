@@ -18,6 +18,8 @@ import de.unimarburg.samplemanagement.repository.UserRepository;
 import de.unimarburg.samplemanagement.security.Roles;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
@@ -220,8 +222,32 @@ public class UserCreationView extends HorizontalLayout {
     }
 
     private void refreshGrid() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String loggedInEmail;
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                loggedInEmail = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+            } else if (principal instanceof String) {
+                // Sometimes principal can be a String (username)
+                loggedInEmail = (String) principal;
+            } else {
+                loggedInEmail = null;
+            }
+        } else {
+            loggedInEmail = null;
+        }
+
         List<User> users = userRepository.findAll();
-        System.out.println("Loaded users: " + users.size()); // DEBUG
+        if (loggedInEmail != null) {
+            // Filter out the currently logged-in user by email
+            users = users.stream()
+                    .filter(user -> !loggedInEmail.equalsIgnoreCase(user.getEmail()))
+                    .toList();
+        }
+
+        System.out.println("Loaded users (excluding logged-in): " + users.size()); // DEBUG
         userGrid.setItems(users);
     }
 }
