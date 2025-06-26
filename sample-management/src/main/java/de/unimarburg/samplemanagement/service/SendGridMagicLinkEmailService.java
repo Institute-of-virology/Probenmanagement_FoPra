@@ -92,6 +92,8 @@ public class SendGridMagicLinkEmailService {
             if (response.getStatusCode() >= 400) {
                 throw new IOException("Failed to send email. Response code: " + response.getStatusCode());
             }
+
+            System.out.println("Email sent successfully to: " + toEmail);
         } catch (IOException ex) {
             throw ex;
         }
