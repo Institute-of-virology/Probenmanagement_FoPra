@@ -8,13 +8,20 @@ import java.util.Set;
 
 @Entity
 @Data
-@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
+@Table(
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "email"),
+                @UniqueConstraint(columnNames = "username")
+        }
+)
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
     private String username;
 
     @Column(nullable = false, unique = true)
@@ -27,19 +34,12 @@ public class User {
     @ElementCollection(fetch = FetchType.EAGER)
     private Set<String> roles;
 
-    /**
-     * One-time token for magic link login
-     */
     @Column(name = "otp_token")
     private String oneTimeToken;
 
-    /**
-     * When the OTP token will expire (epoch timestamp)
-     */
     @Column(name = "otp_token_expiry")
     private Instant oneTimeTokenExpiry;
 
-    // Optional: store last login time
     @Column(name = "last_login")
     private Instant lastLogin;
 
@@ -53,5 +53,9 @@ public class User {
     public void clearOtpToken() {
         this.oneTimeToken = null;
         this.oneTimeTokenExpiry = null;
+    }
+
+    public void setUsername(String username) {
+        this.username = username != null ? username.toLowerCase() : null;
     }
 }

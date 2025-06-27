@@ -100,6 +100,11 @@ public class UserCreationView extends HorizontalLayout {
             return;
         }
 
+        if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+            Notification.show("User already exists with this username.");
+            return;
+        }
+
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);

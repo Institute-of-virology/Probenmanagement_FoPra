@@ -23,9 +23,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/images/**").permitAll()
+                        .requestMatchers("/favicon.ico").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
-                .usernameParameter("email")
+                .usernameParameter("username")
                 .permitAll())
                 .oneTimeTokenLogin(Customizer.withDefaults())
                 .build();
