@@ -39,7 +39,7 @@ public class MagicLinkOneTimeTokenGenerationSuccessHandler implements OneTimeTok
             throw new ServletException("Username parameter is missing");
         }
 
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new ServletException("User not found for username: " + username));
 
         String email = user.getEmail();
