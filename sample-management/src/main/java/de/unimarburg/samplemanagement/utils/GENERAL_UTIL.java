@@ -83,4 +83,15 @@ public class GENERAL_UTIL {
         Node document = parser.parse(markdown);
         return renderer.render(document);
     }
+
+    public static String generateRandomPassword(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            int idx = (int) (Math.random() * chars.length());
+            sb.append(chars.charAt(idx));
+        }
+        return sb.toString();
+    }
+
 }
