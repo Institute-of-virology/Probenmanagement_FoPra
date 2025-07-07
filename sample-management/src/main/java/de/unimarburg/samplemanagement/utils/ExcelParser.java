@@ -42,84 +42,98 @@ public class ExcelParser {
         Iterator<Row> iterator = sheet.iterator();
 
         String studyName;
-        List<Subject> subjectList = new ArrayList<>();
+        Date deliveryDate;
 
-        // Reading first line
+        // Skip first 3 rows (we want row 3 which is index 2)
+        for (int i = 0; i < 2 && iterator.hasNext(); i++) {
+            iterator.next();
+        }
+
+        // Reading Study Name from Row 4, Column D (index 3)
         if (iterator.hasNext()) {
             Row currentRow = iterator.next();
-            studyName = (String) getCellValue(currentRow.getCell(1), cellType.STRING);
-            if (iterator.hasNext()) {
-                // Skip the header
-                iterator.next();
-            }
-            else {
-                throw new IOException("Only Study Name is available, no data");
-            }
-        }
-        else {
+            studyName = (String) getCellValue(currentRow.getCell(3), cellType.STRING);
+
+            Row deliveryDateRow = sheet.getRow(5);
+            deliveryDate = (Date) getCellValue(deliveryDateRow.getCell(3), cellType.DATE);
+            System.out.println("Delivery date is : " + deliveryDate);
+        } else {
             throw new IOException("Empty Excel File");
         }
+
         Study study = studyRepository.findByStudyName(studyName);
-        // is this the currently selected study?
         Study selectedStudy = clientStateService.getClientState().getSelectedStudy();
         if (selectedStudy != null && !selectedStudy.getStudyName().equals(studyName)) {
             throw new IOException("Selected study does not match the study in the file");
         }
+
+        if (study == null) {
+            throw new IOException("Study not found");
+        }
+
+        // Use default alias as Long
+        Long defaultAlias = (long) (10000 + new Random().nextInt(90000));
+        Subject defaultSubject = subjectRepository.getSubjectByAliasAndStudy(defaultAlias, study)
+                .orElseGet(() -> {
+                    Subject newSubject = new Subject();
+                    newSubject.setAlias(defaultAlias);
+                    newSubject.setStudy(study);
+                    return subjectRepository.save(newSubject);
+                });
+
+        // Create a new SampleDelivery
         SampleDelivery sampleDelivery = new SampleDelivery();
         sampleDelivery.setDeliveryDate(new Date());
         sampleDelivery.setStudy(study);
-        if (study == null) {
-            throw new IOException("Study not found");
+
+        // Skip rows until sample data starts at row 11 (index 10)
+        for (int i = 0; i < 6 && iterator.hasNext(); i++) {
+            iterator.next();
         }
 
         while (iterator.hasNext()) {
             Row currentRow = iterator.next();
 
-            //Creating Sample Objects
-            Sample sample = new Sample();
-            String coordinates = (String) getCellValue(currentRow.getCell(0), cellType.STRING);
-            sample.setCoordinates(coordinates);
-
-
-            double aliasDouble = (Double) getCellValue(currentRow.getCell(1), cellType.NUMERIC);
-            long alias = getNumericValue(aliasDouble);
-            Subject subject = getSubject(alias, study);
-
-            subjectList.add(subject);
-            sample.setSubject(subject);
-
-            double visitDouble = (Double) getCellValue(currentRow.getCell(2), cellType.NUMERIC);
-            long visit = getNumericValue(visitDouble);
-            sample.setVisits((int) visit);
-
-            Date date = (Date) getCellValue(currentRow.getCell(3), cellType.DATE);
-            sample.setSampleDate(date);
-
-            String amount = (String) getCellValue(currentRow.getCell(4), cellType.STRING);
-            sample.setSample_amount(amount);
-
-            String sampleType = (String) getCellValue(currentRow.getCell(5), cellType.STRING);
-            sample.setSample_type(sampleType);
-
-            String barcode = "";
-            try {
-                barcode = (String) getCellValue(currentRow.getCell(6), cellType.STRING);
-            } catch (IOException e) {
-                Double barcodeDouble = (Double) getCellValue(currentRow.getCell(6), cellType.NUMERIC);
-                barcode = String.valueOf(barcodeDouble).split("\\.")[0];
+            // Skip empty rows
+            if (currentRow == null || currentRow.getCell(0) == null) {
+                continue;
             }
 
+            Sample sample = new Sample();
+
+            String coordinates = (String) getCellValue(currentRow.getCell(1), cellType.STRING);
+            sample.setCoordinates(coordinates);
+
+            sample.setSubject(defaultSubject);
+
+            // There is no sample date column in the new structure → skip setting date
+
+            String barcode;
+            try {
+                barcode = (String) getCellValue(currentRow.getCell(2), cellType.STRING);
+            } catch (IOException e) {
+                Double barcodeDouble = (Double) getCellValue(currentRow.getCell(2), cellType.NUMERIC);
+                barcode = String.valueOf(barcodeDouble).split("\\.")[0];
+            }
             sample.setSample_barcode(barcode);
+
+            String amount = String.valueOf(getCellValue(currentRow.getCell(3), cellType.NUMERIC));
+            sample.setSample_amount(amount);
+
+            sample.setSampleDate(deliveryDate);
+
+            String sampleType = (String) getCellValue(currentRow.getCell(4), cellType.STRING);
+            sample.setSample_type(sampleType);
 
             sample.setStudy(study);
 
             sampleDelivery.addSample(sample);
         }
+
         workbook.close();
         inputStream.close();
 
         sampleDeliveryRepository.save(sampleDelivery);
-
     }
 
     private Subject getSubject(long alias, Study study) {
@@ -178,73 +192,93 @@ public class ExcelParser {
         }
         throw new IOException("Expected int value, given Double");
     }
+
     public void readArbeitslist(FileInputStream inputStream) throws IOException {
         System.out.println("I am in readfile");
+
         Workbook workbook = new XSSFWorkbook(inputStream);
         Sheet sheet = workbook.getSheetAt(0);
         Iterator<Row> iterator = sheet.iterator();
 
         String studyName;
-        // Reading first line
+        Date deliveryDate;
+
+        // Skip to Row 4 (index 3) for Study Name
         if (iterator.hasNext()) {
-            System.out.println("I am in if part");
-            Row studyNameRow = sheet.getRow(2);
-            studyName = (String) getCellValue(studyNameRow.getCell(5), cellType.STRING);
+            // skip 3 rows
+            for (int i = 0; i < 3 && iterator.hasNext(); i++) iterator.next();
+
+            Row studyNameRow = sheet.getRow(3); // Row 4 (index 3)
+            studyName = (String) getCellValue(studyNameRow.getCell(3), cellType.STRING); // Column D (index 3)
             System.out.println("Study name is : " + studyName);
-            if (iterator.hasNext()) {
-                // Skip the header
-                iterator.next();
-            }
-            else {
-                throw new IOException("Only Study Name is available, no data");
-            }
-        }
-        else {
+
+            Row deliveryDateRow = sheet.getRow(5);
+            deliveryDate = (Date) getCellValue(deliveryDateRow.getCell(3), cellType.DATE);
+            System.out.println("Delivery date is : " + deliveryDate);
+        } else {
             throw new IOException("Empty Excel File");
         }
+
         Study study = studyRepository.findByStudyName(studyName);
-        // is this the currently selected study?
         Study selectedStudy = clientStateService.getClientState().getSelectedStudy();
+
         System.out.println("selected study is: " + selectedStudy.getStudyName());
         if (selectedStudy != null && !selectedStudy.getStudyName().equals(studyName)) {
             throw new IOException("Selected study does not match the study in the file");
         }
-        Row assay = sheet.getRow(3);
-        String analysename = (String) getCellValue(assay.getCell(5),cellType.STRING );
-        System.out.println("Analsis name is : " + analysename);
-        selectedAnalysisType = study.getAnalysisTypes().stream().filter(analysis -> analysis.getAnalysisName().equals(analysename)).findFirst().get();
-        int startRow = 11;
-        Map<String,String> map = new HashMap<>();
+
+        // 🔴 Assuming assay/analysis name is no longer provided in the new sheet
+        // If it *is*, please let me know where it appears so I can re-add this:
+        // Row assay = sheet.getRow(3); // <- previously used row 4
+        // String analysename = (String) getCellValue(assay.getCell(5), cellType.STRING);
+
+        // TEMPORARY placeholder: using first available analysisType
+        selectedAnalysisType = study.getAnalysisTypes().stream().findFirst().orElseThrow(() ->
+                new IOException("No analysis types found for the study"));
+
+        // Sample data starts from Row 11 (index 10)
+        int startRow = 10;
+
+        Map<String, String> map = new HashMap<>();
         for (int i = startRow; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
             if (row != null) {
                 String barcode = "";
                 try {
                     System.out.println("in barcode");
-                    barcode = (String) getCellValue(row.getCell(3), cellType.STRING);
+                    barcode = (String) getCellValue(row.getCell(2), cellType.STRING); // Column C (index 1)
                 } catch (IOException e) {
-                    System.out.println(" in catch");
-                    Double barcodeDouble = (Double) getCellValue(row.getCell(3), cellType.NUMERIC);
+                    System.out.println("in catch");
+                    Double barcodeDouble = (Double) getCellValue(row.getCell(2), cellType.NUMERIC);
                     barcode = String.valueOf(barcodeDouble).split("\\.")[0];
                 }
+
+                // Assuming Analysis Result is in Column E (index 4)
                 System.out.println("before map");
-                map.put(barcode, String.valueOf(row.getCell(6)));
+                map.put(barcode, String.valueOf(row.getCell(4))); // update from cell(6) to cell(4)
             }
         }
+
         map.forEach((key, value) -> System.out.println("Key: " + key + ", Value: " + value));
+
         List<Analysis> relevantAnalyses = study.getListOfSamples().stream()
                 .flatMap(sample -> sample.getListOfAnalysis().stream())
                 .filter(analysis -> analysis.getAnalysisType().getId().equals(selectedAnalysisType.getId()))
                 .toList();
-        for (Map.Entry<String, String> entry : map.entrySet()){
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
             String barcode = entry.getKey();
-            Analysis analysis = findCorrectAnalysis(relevantAnalyses,barcode);
-            analysis.setAnalysisResult(String.valueOf(map.get(barcode)));
+            Analysis analysis = findCorrectAnalysis(relevantAnalyses, barcode);
+            analysis.setAnalysisResult(entry.getValue());
+            // ✅ Set delivery date to the corresponding sample
+            if (analysis.getSample() != null) {
+                analysis.getSample().setSampleDate(deliveryDate);
+            }
             analysisRepository.save(analysis);
         }
+
         workbook.close();
         inputStream.close();
-
     }
 
     public Analysis findCorrectAnalysis(List<Analysis> list, String barcode){
