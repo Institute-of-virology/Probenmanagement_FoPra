@@ -94,20 +94,22 @@ public class ExcelParser {
         while (iterator.hasNext()) {
             Row currentRow = iterator.next();
 
-            // Skip empty rows
+            // Skip null or empty rows
             if (currentRow == null || currentRow.getCell(0) == null) {
                 continue;
             }
 
             Sample sample = new Sample();
 
+            // Coordinates (Column B = index 1)
             String coordinates = (String) getCellValue(currentRow.getCell(1), cellType.STRING);
             sample.setCoordinates(coordinates);
 
             sample.setSubject(defaultSubject);
+            sample.setSampleDate(deliveryDate);
+            sample.setStudy(study);
 
-            // There is no sample date column in the new structure → skip setting date
-
+            // Barcode (Column C = index 2)
             String barcode;
             try {
                 barcode = (String) getCellValue(currentRow.getCell(2), cellType.STRING);
@@ -115,21 +117,34 @@ public class ExcelParser {
                 Double barcodeDouble = (Double) getCellValue(currentRow.getCell(2), cellType.NUMERIC);
                 barcode = String.valueOf(barcodeDouble).split("\\.")[0];
             }
+
+            // Skip rows with empty barcode
+            if (barcode == null || barcode.trim().isEmpty()) {
+                System.out.println("Skipping row " + currentRow.getRowNum() + ": Empty barcode.");
+                continue;
+            }
+
+            // Skip if barcode already exists for this study
+            String finalBarcode = barcode;
+            boolean duplicateExists = study.getListOfSamples().stream()
+                    .anyMatch(s -> finalBarcode.equals(s.getSample_barcode()));
+            if (duplicateExists) {
+                System.out.println("Skipping duplicate barcode: " + barcode + " for study: " + study.getStudyName());
+                continue;
+            }
+
             sample.setSample_barcode(barcode);
 
+            // Amount (Column D = index 3)
             String amount = String.valueOf(getCellValue(currentRow.getCell(3), cellType.NUMERIC));
             sample.setSample_amount(amount);
 
-            sample.setSampleDate(deliveryDate);
-
+            // Sample type (Column E = index 4)
             String sampleType = (String) getCellValue(currentRow.getCell(4), cellType.STRING);
             sample.setSample_type(sampleType);
 
-            sample.setStudy(study);
-
             sampleDelivery.addSample(sample);
         }
-
         workbook.close();
         inputStream.close();
 

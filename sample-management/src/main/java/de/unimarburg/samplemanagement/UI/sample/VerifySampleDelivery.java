@@ -41,8 +41,12 @@ public class VerifySampleDelivery extends HorizontalLayout {
         }
 
         if (sampleDelivery == null) {
-            //select most recent sample delivery
-            sampleDelivery = study.getSampleDeliveryList().get(study.getSampleDeliveryList().size() - 1);
+            List<SampleDelivery> deliveries = study.getSampleDeliveryList();
+            if (deliveries == null || deliveries.isEmpty()) {
+                add("No sample deliveries available for this study.");
+                return;
+            }
+            sampleDelivery = deliveries.get(deliveries.size() - 1);
         }
 
         VerticalLayout content = getContent();
