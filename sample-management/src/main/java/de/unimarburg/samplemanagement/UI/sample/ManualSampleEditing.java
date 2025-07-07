@@ -79,7 +79,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         // Define columns
         Grid.Column<Sample> barcodeColumn = sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode").setSortable(true);
         Grid.Column<Sample> typeColumn = sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type").setSortable(true);
-        Grid.Column<Sample> amountColumn = sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount").setSortable(true);
+        Grid.Column<Sample> amountColumn = sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount (in μl)").setSortable(true);
         Grid.Column<Sample> dateColumn = sampleGrid.addColumn(Sample::getSampleDate).setHeader("Sample Date").setSortable(true).setRenderer(GENERAL_UTIL.renderDate());
         Grid.Column<Sample> sampleDelivery = sampleGrid.addColumn(sample -> {
             SampleDelivery sampleDelivery1 = sample.getSampleDelivery();

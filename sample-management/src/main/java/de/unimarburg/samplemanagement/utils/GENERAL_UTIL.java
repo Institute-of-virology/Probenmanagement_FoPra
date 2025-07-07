@@ -14,6 +14,8 @@ import de.unimarburg.samplemanagement.model.Analysis;
 import de.unimarburg.samplemanagement.model.Sample;
 import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
@@ -93,5 +95,13 @@ public class GENERAL_UTIL {
         }
         return sb.toString();
     }
+
+    public static boolean hasRole(String role) {
+        return SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getAuthorities()
+                .contains(new SimpleGrantedAuthority(role));
+    }
+
 
 }
