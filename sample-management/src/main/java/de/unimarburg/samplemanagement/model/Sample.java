@@ -43,6 +43,7 @@ public class Sample {
     private String sample_amount;
     private String sample_barcode;
     private String sample_type;
+    private boolean validated;
 
     @OneToMany(mappedBy = "sample", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<Analysis> listOfAnalysis;
