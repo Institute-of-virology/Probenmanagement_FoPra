@@ -57,13 +57,12 @@ public class DownloadLinksArea extends VerticalLayout {
             }
             try {
                 excelParser.readExcelFile(getStream(selectedFile));
+                Notification.show("File processed successfully");
+                //Navigate to veriufication
+                UI.getCurrent().navigate("VerifySampleDelivery");
             } catch (IOException ex) {
                 Notification.show("Error processing file: " + ex.getMessage());
-                return;
             }
-            Notification.show("File processed successfully");
-            //Navigate to veriufication
-            UI.getCurrent().navigate("VerifySampleDelivery");
         }));
         add(fileGrid, horizontalLayout);
     }
