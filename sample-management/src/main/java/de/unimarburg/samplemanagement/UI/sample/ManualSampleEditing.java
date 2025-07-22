@@ -50,7 +50,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         add(verticalLayout);
     }
 
-    private boolean isSampeValid(Sample selectedSample) {
+    private boolean isSampleValid(Sample selectedSample) {
         if (selectedSample == null) {
             return true;
         }
@@ -180,7 +180,7 @@ public class ManualSampleEditing extends HorizontalLayout {
             if (!binder.writeBeanIfValid(editedSample)){
                 Notification.show("Please make a valid sample");
             }
-            if (!isSampeValid(editedSample)){
+            if (!isSampleValid(editedSample)){
                 Notification.show("Please make a valid sample");
                 return;
             }

@@ -10,11 +10,9 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
-import com.vaadin.flow.shared.Registration;
 import de.unimarburg.samplemanagement.model.Study;
-import de.unimarburg.samplemanagement.repository.StudyRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
 
 @Component
 public class StudyForm extends FormLayout {
@@ -32,9 +30,7 @@ public class StudyForm extends FormLayout {
     Button save = new Button("Save");
     Button delete = new Button("Delete");
     Button close = new Button("Cancel");
-    private Study study;
-    @Autowired
-    StudyRepository studyRepository;
+
     public StudyForm() {
         binder.bindInstanceFields(this);
         // Add a label to show the date format pattern
@@ -43,7 +39,6 @@ public class StudyForm extends FormLayout {
                 createButtonsLayout());
     }
     public void setStudy(Study study) {
-        this.study = study;
         binder.setBean(study);
     }
 
@@ -71,7 +66,7 @@ public class StudyForm extends FormLayout {
 
     // Events
     public static abstract class StudyFormEvent extends ComponentEvent<StudyForm> {
-        private Study study;
+        private final Study study;
 
         protected StudyFormEvent(StudyForm source, Study study) {
             super(source, false);
@@ -102,14 +97,14 @@ public class StudyForm extends FormLayout {
         }
     }
 
-    public Registration addDeleteListener(ComponentEventListener<DeleteEvent> listener) {
-        return addListener(DeleteEvent.class, listener);
+    public void addDeleteListener(ComponentEventListener<DeleteEvent> listener) {
+        addListener(DeleteEvent.class, listener);
     }
 
-    public Registration addSaveListener(ComponentEventListener<SaveEvent> listener) {
-        return addListener(SaveEvent.class, listener);
+    public void addSaveListener(ComponentEventListener<SaveEvent> listener) {
+        addListener(SaveEvent.class, listener);
     }
-    public Registration addCloseListener(ComponentEventListener<CloseEvent> listener) {
-        return addListener(CloseEvent.class, listener);
+    public void addCloseListener(ComponentEventListener<CloseEvent> listener) {
+        addListener(CloseEvent.class, listener);
     }
 }

@@ -2,7 +2,6 @@ package de.unimarburg.samplemanagement.UI.study;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
-import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -59,7 +58,7 @@ public class EditStudy extends HorizontalLayout {
         grid.addColumn(Study::getStartDate).setHeader("Start Date").setAutoWidth(true);
         grid.addColumn(Study::getEndDate).setHeader("End Date").setAutoWidth(true);
         grid.addColumn(study->study.getNumberOfSubjects()+"/"+study.getExpectedNumberOfSubjects()).setHeader("Expected Number Of Subjects").setAutoWidth(true);
-        grid.addColumn(study-> study.getSampleDeliveryList().size()+"/"+study.getExpectedNumberOfSampeDeliveries()).setHeader("Number Of Sample Deliveries").setAutoWidth(true);
+        grid.addColumn(study-> study.getSampleDeliveryList().size()+"/"+study.getExpectedNumberOfSampleDeliveries()).setHeader("Number Of Sample Deliveries").setAutoWidth(true);
         grid.addColumn(Study::getSender1).setHeader("Sender1").setAutoWidth(true);
         grid.addColumn(Study::getSender2).setHeader("Sender2").setAutoWidth(true);
         grid.addColumn(Study::getSender3).setHeader("Sender3").setAutoWidth(true);
@@ -188,7 +187,7 @@ public class EditStudy extends HorizontalLayout {
         study.setStudyName(studyname);
         study.setStartDate(GENERAL_UTIL.convertToDate(startdate));
         study.setEndDate(GENERAL_UTIL.convertToDate(enddate));
-        study.setExpectedNumberOfSampeDeliveries(abnahmeZahl);
+        study.setExpectedNumberOfSampleDeliveries(abnahmeZahl);
         study.setRemark(remarks);
         study.setSponsor(sponsor);
         study.setSender1(sender1);

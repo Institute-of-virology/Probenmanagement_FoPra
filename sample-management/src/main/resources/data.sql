@@ -1,5 +1,5 @@
 -- Studies
-INSERT INTO study (id, study_name, start_date, end_date, sponsor, sender1, sender2, sender3, expected_number_of_subjects, expected_number_of_sampe_deliveries, remark)
+INSERT INTO study (id, study_name, start_date, end_date, sponsor, sender1, sender2, sender3, expected_number_of_subjects, expected_number_of_sample_deliveries, remark)
 VALUES
     (1, 'Sample Study 1', CURRENT_DATE, CURRENT_DATE, 'Virologie', 'John', 'Robert', 'Peter', '100', '50', 'From Marburg'),
     (2, 'Sample Study 2', CURRENT_DATE, CURRENT_DATE, 'Medizin', 'Alex', 'Johnny', 'Chris', '10', '5', 'From Giessen'),
