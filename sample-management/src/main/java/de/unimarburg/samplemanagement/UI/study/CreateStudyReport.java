@@ -85,16 +85,27 @@ public class CreateStudyReport extends HorizontalLayout {
         List<Sample> samples = study.getListOfSamples();
 
         sampleGrid = new Grid<>();
+        sampleGrid.setItems(samples); // Don't forget to set items
 
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
 
-        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes();
+        // Deduplicate AnalysisTypes by name to avoid duplicate headers
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toMap(
+                                AnalysisType::getAnalysisName, // use name as deduplication key
+                                at -> at,
+                                (a, b) -> a // keep the first if duplicate
+                        ),
+                        map -> new java.util.ArrayList<>(map.values())
+                ));
 
         // Add columns for each unique analysis
         if (uniqueAnalysisTypes.isEmpty()) {
             body.add("No Analyses available for Study: " + study.getStudyName());
             return body;
         }
+
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
             sampleGrid.addColumn(sample -> GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId()))
                     .setHeader(analysisType.getAnalysisName());
@@ -129,7 +140,7 @@ public class CreateStudyReport extends HorizontalLayout {
             Checkbox checkbox = new Checkbox();
             Div labelRunningNumber = new Div("Delivery " + sampleDelivery.getRunningNumber());
             Div labelDate = new Div(new SimpleDateFormat("dd.MM.yyyy").format(sampleDelivery.getDeliveryDate()));
-            VerticalLayout labelLayout = new VerticalLayout(checkbox,labelRunningNumber,labelDate);
+            VerticalLayout labelLayout = new VerticalLayout(checkbox, labelRunningNumber, labelDate);
 
             // Initialize checkbox value and store it in the map
             sampleDeliveriesCheckboxMap.put(sampleDelivery, checkbox.getValue());
@@ -323,7 +334,7 @@ public class CreateStudyReport extends HorizontalLayout {
         document.add(new Paragraph("\n"));
 
         // Add "Study: " followed by StudyName and studyDate
-        Paragraph studyDetails = new Paragraph("Study: " + study.getStudyName() + ", " + study.getStartDate().toString()+"-"+study.getEndDate().toString())
+        Paragraph studyDetails = new Paragraph("Study: " + study.getStudyName() + ", " + study.getStartDate().toString() + "-" + study.getEndDate().toString())
                 .setFont(calibriFont)
                 .setFontSize(11);
         document.add(studyDetails);

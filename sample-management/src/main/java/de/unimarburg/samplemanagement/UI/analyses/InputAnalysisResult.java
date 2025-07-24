@@ -20,7 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 
 @Route("/EnterSampleAnalysis")
-public class InputAnalysisResult extends HorizontalLayout{
+public class InputAnalysisResult extends HorizontalLayout {
     private final SampleRepository sampleRepository;
     private ClientStateService clientStateService;
     private Study study;
@@ -42,26 +42,37 @@ public class InputAnalysisResult extends HorizontalLayout{
 
     private VerticalLayout loadContent() {
         VerticalLayout body = new VerticalLayout();
-        List<Button> analysisSelectionButtons = study.getAnalysisTypes().stream()
+
+        // Deduplicate analysis types by name
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toMap(AnalysisType::getId, at ->
+                                at, (a, b) -> a),
+                        map -> new java.util.ArrayList<>(map.values())
+                ));
+
+        List<Button> analysisSelectionButtons = uniqueAnalysisTypes.stream()
                 .map(analysisType -> {
-            Button button = new Button(analysisType.getAnalysisName());
-            button.addClickListener(e -> {
-                selectedAnalysisType = analysisType;
-                body.removeAll();
-                body.add(loadAnalysisTypeContent());
-            });
-            return button;
-        }).toList();
+                    Button button = new Button(analysisType.getAnalysisName());
+                    button.addClickListener(e -> {
+                        selectedAnalysisType = analysisType;
+                        body.removeAll();
+                        body.add(loadAnalysisTypeContent());
+                    });
+                    return button;
+                }).toList();
+
         body.add(DISPLAY_UTILS.getBoxAlignment(analysisSelectionButtons.toArray(new Button[0])));
         return body;
     }
 
+
     private Component loadAnalysisTypeContent() {
         Grid<Analysis> analysisGrid = new Grid<>();
         List<Analysis> relevantAnalyses = study.getListOfSamples().stream()
-                        .flatMap(sample -> sample.getListOfAnalysis().stream())
-                                .filter(analysis -> analysis.getAnalysisType().getId().equals(selectedAnalysisType.getId()))
-                                        .toList();
+                .flatMap(sample -> sample.getListOfAnalysis().stream())
+                .filter(analysis -> analysis.getAnalysisType().getId().equals(selectedAnalysisType.getId()))
+                .toList();
 
         analysisGrid.setItems(relevantAnalyses);
 
@@ -70,7 +81,7 @@ public class InputAnalysisResult extends HorizontalLayout{
         analysisGrid.addComponentColumn(analysis -> {
             TextField textField = new TextField();
             String analysisResult = analysis.getAnalysisResult();
-            if (analysisResult==null) {
+            if (analysisResult == null) {
                 analysisResult = "";
             }
             textField.setValue(analysisResult);
@@ -79,7 +90,6 @@ public class InputAnalysisResult extends HorizontalLayout{
             });
             return textField;
         }).setHeader(selectedAnalysisType.getAnalysisName());
-
 
 
         return analysisGrid;
