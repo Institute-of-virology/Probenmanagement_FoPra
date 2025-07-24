@@ -40,15 +40,26 @@ public class AnalysisResultView extends HorizontalLayout {
         List<Sample> samples = study.getListOfSamples();
         Grid<Sample> sampleGrid = new Grid<>();
         sampleGrid.setItems(samples);
-        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes();
+
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
+
+        // Deduplicate AnalysisTypes by name
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toMap(
+                                AnalysisType::getAnalysisName, // or use getId() to deduplicate strictly
+                                at -> at,
+                                (a, b) -> a
+                        ),
+                        map -> new java.util.ArrayList<>(map.values())
+                ));
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
             sampleGrid.addColumn(sample -> GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId()))
                     .setHeader(analysisType.getAnalysisName());
         }
-        body.add(sampleGrid);
 
+        body.add(sampleGrid);
         return body;
     }
 }

@@ -23,6 +23,8 @@ import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.ExcelTemplateFiller;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -38,6 +40,8 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
     Anchor downloadLink = new Anchor("", "Download Workplace Lists");
     Div wrapperDiv = new Div(downloadLink);
+
+    private final Set<String> addedAnalysisTypeHeaders = new HashSet<>();
 
 
     @Autowired
@@ -59,7 +63,14 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
         selectedSampleBarcodes.addAll(study.getListOfSamples());
         List<Sample> samples = study.getListOfSamples();
-        Grid<Sample> sampleGrid = createSampleGrid(samples, study.getAnalysisTypes());
+
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(AnalysisType::getAnalysisName, at -> at, (a, b) -> a),
+                        m -> new ArrayList<>(m.values())
+                ));
+
+        Grid<Sample> sampleGrid = createSampleGrid(samples, uniqueAnalysisTypes);
 
         // Dropdown filter for deliveries
         HorizontalLayout filterLayout = new HorizontalLayout();
@@ -236,7 +247,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
     private Map<String, String> collectData(RadioButtonGroup<String> radioButtonGroup, HorizontalLayout textFieldsLayout, String protocolName, Integer plateNr) {
         return Map.of(
                 "operatorName", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(0)).getValue()).orElse(""),
-                "calculatorName" , Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
+                "calculatorName", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
                 "freeTextField", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
                 "nr", plateNr.toString(),
                 "assay", Optional.ofNullable(radioButtonGroup.getValue()).orElse(""),
