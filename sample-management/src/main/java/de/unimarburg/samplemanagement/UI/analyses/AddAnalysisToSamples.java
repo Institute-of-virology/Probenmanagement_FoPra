@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Route("/AddAnalysisToSample")
 public class AddAnalysisToSamples extends HorizontalLayout {
@@ -41,6 +42,7 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         //set colour
         button.getStyle().set("background-color", "green");
     }
+
     private void setButtonRemoveMode(Button button) {
         button.setText("Remove");
         //set colour
@@ -57,8 +59,15 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type");
         sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");
 
+        // get unique analysis types to avoid duplicates in the grid header
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(AnalysisType::getId, at -> at, (a, b) -> a),
+                        map -> new ArrayList<>(map.values())
+                ));
+
         //add checkbox for each analysis type
-        for (AnalysisType analysisType :study.getAnalysisTypes()) {
+        for (AnalysisType analysisType : uniqueAnalysisTypes) {
             sampleGrid.addComponentColumn(sample -> {
                 Button button = new Button("");
                 if (sample.getListOfAnalysis().stream().anyMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()))) {
@@ -107,7 +116,7 @@ public class AddAnalysisToSamples extends HorizontalLayout {
 
         //add-all buttons
         List<Button> add_all_buttons = new ArrayList<>();
-        for (AnalysisType analysisType :study.getAnalysisTypes()) {
+        for (AnalysisType analysisType : study.getAnalysisTypes()) {
             Button button = new Button("Add all " + analysisType.getAnalysisName());
             button.addClickListener(e -> {
                 for (Sample sample : study.getListOfSamples()) {
