@@ -80,7 +80,7 @@ public class CreateStudy extends HorizontalLayout {
         study.setStudyName(studyname);
         study.setStartDate(GENERAL_UTIL.convertToDate(startdate));
         study.setEndDate(GENERAL_UTIL.convertToDate(enddate));
-        study.setExpectedNumberOfSampeDeliveries(abnahmeZahl);
+        study.setExpectedNumberOfSampleDeliveries(abnahmeZahl);
         study.setRemark(remarks);
         study.setSponsor(sponsor);
         study.setSender1(sender1);

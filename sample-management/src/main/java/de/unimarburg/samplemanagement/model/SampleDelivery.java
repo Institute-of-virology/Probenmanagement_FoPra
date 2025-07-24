@@ -24,6 +24,7 @@ public class SampleDelivery {
     @Temporal(TemporalType.DATE)
     private Date deliveryDate;
 
+    private String boxNumber;
 
     public int getRunningNumber() {
         List<SampleDelivery> sampleDeliveries = study.getSampleDeliveryList();

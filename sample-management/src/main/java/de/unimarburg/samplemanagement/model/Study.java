@@ -25,7 +25,7 @@ public class Study {
     private Long id;
     private String studyName;
     private String expectedNumberOfSubjects;
-    private String expectedNumberOfSampeDeliveries;
+    private String expectedNumberOfSampleDeliveries;
     private String sender1;
     private String sender2;
     private String sender3;
@@ -61,13 +61,8 @@ public class Study {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
-
-
     public String getName() {
         return studyName;
-    }
-    public List<AnalysisType> getAnalysisTypes() {
-        return analysisTypes;
     }
 
 }

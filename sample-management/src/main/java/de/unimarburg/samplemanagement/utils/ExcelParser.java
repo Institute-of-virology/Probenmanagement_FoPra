@@ -43,6 +43,7 @@ public class ExcelParser {
 
         String studyName;
         Date deliveryDate;
+        String boxNumber;
 
         // Skip first 3 rows (we want row 3 which is index 2)
         for (int i = 0; i < 2 && iterator.hasNext(); i++) {
@@ -57,6 +58,15 @@ public class ExcelParser {
             Row deliveryDateRow = sheet.getRow(5);
             deliveryDate = (Date) getCellValue(deliveryDateRow.getCell(3), cellType.DATE);
             System.out.println("Delivery date is : " + deliveryDate);
+
+            Row boxNumberRow = sheet.getRow(7);
+            try {
+                boxNumber = (String) getCellValue(boxNumberRow.getCell(3), cellType.STRING);
+            } catch (IOException e) {
+                Double boxNumberDouble = (Double) getCellValue(boxNumberRow.getCell(3), cellType.NUMERIC);
+                boxNumber = String.valueOf(boxNumberDouble).split("\\.")[0];
+            }
+
         } else {
             throw new IOException("Empty Excel File");
         }
@@ -69,6 +79,10 @@ public class ExcelParser {
 
         if (study == null) {
             throw new IOException("Study not found");
+        }
+
+        if(sampleDeliveryRepository.findByStudyAndBoxNumber(study, boxNumber).isPresent()){
+            throw new IOException("This delivery has already been processed.");
         }
 
         // Use default alias as Long
@@ -85,6 +99,7 @@ public class ExcelParser {
         SampleDelivery sampleDelivery = new SampleDelivery();
         sampleDelivery.setDeliveryDate(new Date());
         sampleDelivery.setStudy(study);
+        sampleDelivery.setBoxNumber(boxNumber);
 
         // Skip rows until sample data starts at row 11 (index 10)
         for (int i = 0; i < 6 && iterator.hasNext(); i++) {

@@ -52,6 +52,7 @@ public class AddAnalysisToStudy extends HorizontalLayout {
             //check validity
             if (analysisName.isEmpty() || analysisTypeRepository.existsByAnalysisName(analysisName.getValue())) {
                 Notification.show("Name of Analysis invalid/duplicate");
+                return;
             }
             //add new analysis type
             AnalysisType analysisType = new AnalysisType();
