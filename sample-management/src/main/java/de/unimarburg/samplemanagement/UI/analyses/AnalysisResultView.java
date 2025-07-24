@@ -43,7 +43,7 @@ public class AnalysisResultView extends HorizontalLayout {
 
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
 
-        // ✅ Deduplicate AnalysisTypes by name
+        // Deduplicate AnalysisTypes by name
         List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
                 .collect(java.util.stream.Collectors.collectingAndThen(
                         java.util.stream.Collectors.toMap(
