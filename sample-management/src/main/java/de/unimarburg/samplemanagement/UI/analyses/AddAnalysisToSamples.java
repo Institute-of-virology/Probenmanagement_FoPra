@@ -116,7 +116,7 @@ public class AddAnalysisToSamples extends HorizontalLayout {
 
         //add-all buttons
         List<Button> add_all_buttons = new ArrayList<>();
-        for (AnalysisType analysisType : study.getAnalysisTypes()) {
+        for (AnalysisType analysisType : uniqueAnalysisTypes) {
             Button button = new Button("Add all " + analysisType.getAnalysisName());
             button.addClickListener(e -> {
                 for (Sample sample : study.getListOfSamples()) {
