@@ -95,7 +95,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
         body.add(sampleGrid);
 
-        RadioButtonGroup<String> radioButtonGroup = createRadioButtonGroup(study.getAnalysisTypes());
+        RadioButtonGroup<String> radioButtonGroup = createRadioButtonGroup(uniqueAnalysisTypes);
         body.add(radioButtonGroup);
 
         DatePicker datePicker = createDatePicker();
