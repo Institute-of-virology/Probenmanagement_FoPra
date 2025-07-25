@@ -5,10 +5,12 @@ import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.renderer.TextRenderer;
 import com.vaadin.flow.router.Route;
 import de.unimarburg.samplemanagement.model.*;
 import de.unimarburg.samplemanagement.repository.SampleRepository;
+import de.unimarburg.samplemanagement.repository.StudyRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.DISPLAY_UTILS;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
@@ -21,13 +23,17 @@ import java.util.stream.Collectors;
 @Route("/AddAnalysisToSample")
 public class AddAnalysisToSamples extends HorizontalLayout {
     private final SampleRepository sampleRepository;
+    private final StudyRepository studyRepository;
+    Grid<Sample> sampleGrid = new Grid<>();
     ClientStateService clientStateService;
     Study study;
 
+
     @Autowired
-    public AddAnalysisToSamples(ClientStateService clientStateService, SampleRepository sampleRepository) {
+    public AddAnalysisToSamples(ClientStateService clientStateService, StudyRepository studyRepository, SampleRepository sampleRepository) {
         this.clientStateService = clientStateService;
         this.sampleRepository = sampleRepository;
+        this.studyRepository = studyRepository;
         add(SIDEBAR_FACTORY.getSidebar(clientStateService.getClientState().getSelectedStudy()));
         study = clientStateService.getClientState().getSelectedStudy();
         if (clientStateService.getClientState().getSelectedStudy() == null) {
@@ -49,9 +55,13 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         button.getStyle().set("background-color", "red");
     }
 
+    private void refreshSampleGrid() {
+        study = studyRepository.findById(study.getId()).orElseThrow();
+        sampleGrid.setItems(study.getListOfSamples());
+    }
+
     private VerticalLayout loadContent() {
         VerticalLayout body = new VerticalLayout();
-        Grid<Sample> sampleGrid = new Grid<>();
         sampleGrid.setItems(study.getListOfSamples());
 
         //sample info
@@ -76,23 +86,34 @@ public class AddAnalysisToSamples extends HorizontalLayout {
                     setButtonRemoveMode(button);
                 }
 
+                // Set button mode on creation
+                boolean analysisExists = sample.getListOfAnalysis().stream()
+                        .anyMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()) &&
+                                a.getSample().getId().equals(sample.getId()));
+                if (analysisExists) {
+                    setButtonRemoveMode(button);
+                } else {
+                    setButtonAddMode(button);
+                }
+
                 button.addClickListener(e -> {
-                    //is text add or remove
-                    if (button.getText().equals("Add")) {
+                    if ("Add".equals(button.getText())) {
                         sample.getListOfAnalysis().add(new Analysis(analysisType, sample));
                         sampleRepository.save(sample);
-
                         setButtonRemoveMode(button);
-                    } else if (button.getText().equals("Remove")) {
-                        //remove analysis from sample
-                        sample.getListOfAnalysis().removeIf(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
+                    } else if ("Remove".equals(button.getText())) {
+                        sample.getListOfAnalysis().removeIf(a ->
+                                a.getAnalysisType().getId().equals(analysisType.getId())
+                        );
                         sampleRepository.save(sample);
-
+                        study = studyRepository.findById(study.getId()).orElseThrow();
+                        sampleGrid.setItems(study.getListOfSamples());
                         setButtonAddMode(button);
                     } else {
-                        throw new RuntimeException("Button text is neither Add nor Remove");
+                        throw new RuntimeException("Unexpected button text: " + button.getText());
                     }
                 });
+
                 return button;
             }).setHeader(analysisType.getAnalysisName());
         }
