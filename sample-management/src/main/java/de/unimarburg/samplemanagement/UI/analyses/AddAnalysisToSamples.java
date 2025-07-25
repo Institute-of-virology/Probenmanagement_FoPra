@@ -106,8 +106,8 @@ public class AddAnalysisToSamples extends HorizontalLayout {
                                 a.getAnalysisType().getId().equals(analysisType.getId())
                         );
                         sampleRepository.save(sample);
-                        study = studyRepository.findById(study.getId()).orElseThrow();
-                        sampleGrid.setItems(study.getListOfSamples());
+
+                        refreshSampleGrid();
                         setButtonAddMode(button);
                     } else {
                         throw new RuntimeException("Unexpected button text: " + button.getText());
