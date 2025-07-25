@@ -45,7 +45,7 @@ public class Sample {
     private String sample_type;
     private boolean validated;
 
-    @OneToMany(mappedBy = "sample", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "sample", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Analysis> listOfAnalysis;
 
     public String getStudyName() {
