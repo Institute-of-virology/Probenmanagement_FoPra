@@ -9,8 +9,9 @@ import org.hibernate.validator.constraints.UniqueElements;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
-
 
 @Getter
 @Setter
@@ -20,10 +21,14 @@ import java.util.stream.Collectors;
         @UniqueConstraint(columnNames = "study_name")
 })
 public class Study {
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
+
+    @Column(name = "study_name", nullable = false, unique = true)
     private String studyName;
+
     private String expectedNumberOfSubjects;
     private String expectedNumberOfSampleDeliveries;
     private String sender1;
@@ -39,20 +44,18 @@ public class Study {
     private Date endDate;
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<Subject> listOfSubjects;
+    private List<Subject> listOfSubjects = new ArrayList<>();
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<SampleDelivery> sampleDeliveryList;
+    private List<SampleDelivery> sampleDeliveryList = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
     @UniqueElements
-    private List<AnalysisType> analysisTypes;
-
+    private Set<AnalysisType> analysisTypes = new HashSet<>();
 
     public int getNumberOfSubjects() {
         return listOfSubjects.size();
     }
-
 
     public List<Sample> getListOfSamples() {
         return listOfSubjects.stream()
@@ -64,5 +67,4 @@ public class Study {
     public String getName() {
         return studyName;
     }
-
 }
