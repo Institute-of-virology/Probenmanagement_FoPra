@@ -35,11 +35,16 @@ import de.unimarburg.samplemanagement.repository.ReportAuthorRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -160,15 +165,21 @@ public class CreateStudyReport extends HorizontalLayout {
         printPdfButton.addClickListener(event -> {
             try {
                 // Generate the PDF file
-                String dest = "study_report.pdf";
+                String dest = "/tmp/study_report.pdf";
                 generatePdf(dest);
 
                 // Create a StreamResource for downloading the generated PDF
+                Path path = Paths.get(dest);
+                if (!Files.exists(path)) {
+                    Notification.show("PDF file was not created. Please try again.");
+                    return;
+                }
+
                 StreamResource resource = new StreamResource("study_report.pdf", () -> {
                     try {
-                        return new ByteArrayInputStream(java.nio.file.Files.readAllBytes(Paths.get(dest)));
-                    } catch (Exception e) {
-                        Notification.show("Error generating PDF: " + e.getMessage());
+                        return new ByteArrayInputStream(Files.readAllBytes(path));
+                    } catch (IOException e) {
+                        Notification.show("Error reading PDF: " + e.getMessage());
                         return null;
                     }
                 });
@@ -184,6 +195,7 @@ public class CreateStudyReport extends HorizontalLayout {
                 body.add(downloadLink);
             } catch (Exception e) {
                 Notification.show("Error generating PDF: " + e.getMessage());
+                e.printStackTrace();
             }
         });
         body.add(printPdfButton);
@@ -228,225 +240,237 @@ public class CreateStudyReport extends HorizontalLayout {
         pdfDoc.setDefaultPageSize(PageSize.A4);
         Document document = new Document(pdfDoc);
 
-        // Load the Calibri font from the resources directory
-        String calibriFontPath = Paths.get(getClass().getClassLoader().getResource("calibri.ttf").toURI()).toString();
-        PdfFont calibriFont = PdfFontFactory.createFont(calibriFontPath, PdfEncodings.IDENTITY_H, true);
-        PdfFont calibriBoldFont = PdfFontFactory.createFont(calibriFontPath, PdfEncodings.IDENTITY_H, true);
+        try (InputStream fontStream = getClass().getClassLoader().getResourceAsStream("calibri.ttf")) {
+            if (fontStream == null) {
+                throw new FileNotFoundException("calibri.ttf resource not found");
+            }
+            byte[] fontBytes = IOUtils.toByteArray(fontStream);
+            PdfFont calibriFont = PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H, true);
 
-        // Load the logo
-        String logoPath = Paths.get(getClass().getClassLoader().getResource("uni-logo.png").toURI()).toString();
-        ImageData logoImageData = ImageDataFactory.create(logoPath);
-        Image logoImage = new Image(logoImageData).scaleToFit(100, 100).setHorizontalAlignment(HorizontalAlignment.CENTER);
+            // Use the same font for bold if you don't have a separate bold font file
+            PdfFont calibriBoldFont = calibriFont;
 
-        // Set the header handler
-        pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new HeaderFooterHandler(logoImage));
+            // Load the logo image from resource stream safely
+            try (InputStream logoStream = getClass().getClassLoader().getResourceAsStream("uni-logo.png")) {
+                if (logoStream == null) {
+                    throw new FileNotFoundException("uni-logo.png resource not found");
+                }
+                byte[] logoBytes = IOUtils.toByteArray(logoStream);
+                ImageData logoImageData = ImageDataFactory.create(logoBytes);
+                Image logoImage = new Image(logoImageData)
+                        .scaleToFit(100, 100)
+                        .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
-        // Set the default font for the document
-        document.setFont(calibriFont);
-        document.setFontSize(11);
+                // Set the header handler
+                pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new HeaderFooterHandler(logoImage));
 
-        // Add spacing after logo
-        document.add(new Paragraph("\n"));
+                // Set the default font for the document
+                document.setFont(calibriFont);
+                document.setFontSize(11);
 
-        // Add the header
-        Paragraph header = new Paragraph("Philipps-Universität Marburg -- Institut für Virologie -- Immunmonitoringlabor")
-                .setFont(calibriBoldFont)
-                .setFontSize(11)
-                .setBold()
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(header);
+                // Add spacing after logo
+                document.add(new Paragraph("\n"));
 
-        // Add a horizontal line separator
-        document.add(new LineSeparator(new SolidLine()));
+                // Add the header
+                Paragraph header = new Paragraph("Philipps-Universität Marburg -- Institut für Virologie -- Immunmonitoringlabor")
+                        .setFont(calibriBoldFont)
+                        .setFontSize(11)
+                        .setBold()
+                        .setTextAlignment(TextAlignment.CENTER);
+                document.add(header);
 
-        // Create the three-column table for sender details and fixed address
-        float[] columnWidths = {2, 3, 5};
-        Table senderTable = new Table(columnWidths);
-        senderTable.setWidth(UnitValue.createPercentValue(100));
+                // Add a horizontal line separator
+                document.add(new LineSeparator(new SolidLine()));
 
-        // Add sender details and fixed address
-        for (int i = 0; i < reportAuthors.size(); i++) {
-            ReportAuthor reportAuthor = reportAuthors.get(i);
-            senderTable.addCell(new Cell().add(new Paragraph(reportAuthor.getName()).setFont(calibriBoldFont).setFontSize(11)).setBold().setBorder(null));
-            senderTable.addCell(new Cell().add(new Paragraph(reportAuthor.getTitle()).setFont(calibriBoldFont).setFontSize(11)).setBorder(null));
+                // Create the three-column table for sender details and fixed address
+                float[] columnWidths = {2, 3, 5};
+                Table senderTable = new Table(columnWidths);
+                senderTable.setWidth(UnitValue.createPercentValue(100));
 
-            if (i == 0) {
-                senderTable.addCell(new Cell(reportAuthors.size(), 1).add(new Paragraph(addressStoreRepository.getOwnAddress())
+                // Add sender details and fixed address
+                for (int i = 0; i < reportAuthors.size(); i++) {
+                    ReportAuthor reportAuthor = reportAuthors.get(i);
+                    senderTable.addCell(new Cell().add(new Paragraph(reportAuthor.getName()).setFont(calibriBoldFont).setFontSize(11)).setBold().setBorder(null));
+                    senderTable.addCell(new Cell().add(new Paragraph(reportAuthor.getTitle()).setFont(calibriBoldFont).setFontSize(11)).setBorder(null));
+
+                    if (i == 0) {
+                        senderTable.addCell(new Cell(reportAuthors.size(), 1).add(new Paragraph(addressStoreRepository.getOwnAddress())
+                                        .setFont(calibriFont)
+                                        .setFontSize(11))
+                                .setBorder(null));
+                    }
+                }
+
+                document.add(senderTable);
+
+                // Add a horizontal line separator
+                document.add(new LineSeparator(new SolidLine()));
+
+                // Add recipient addresses
+                Paragraph recipient = new Paragraph("Recipient Address:\n" + study.getSponsor())
+                        .setFont(calibriFont)
+                        .setFontSize(11);
+                document.add(recipient);
+
+                // Spacing
+                document.add(new Paragraph("\n"));
+
+                // Add "Date of Report Generation: " followed by the current date and time
+                LocalDateTime now = LocalDateTime.now();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                Paragraph dateOfReport = new Paragraph("Date of Report Generation: " + now.format(formatter))
+                        .setFont(calibriFont)
+                        .setFontSize(11)
+                        .setBold();
+                document.add(dateOfReport);
+
+                // Add spacing after recipient address
+                document.add(new Paragraph("\n"));
+
+                // Add "Report on the results of the serological analysis" in bold
+                Paragraph reportTitle = new Paragraph("Report on the results of the serological analysis")
+                        .setFont(calibriBoldFont)
+                        .setFontSize(11)
+                        .setBold();
+                document.add(reportTitle);
+
+                // Add spacing after report title
+                document.add(new Paragraph("\n"));
+
+                // Add "Analytical methods: " followed by AnalysisTypeName for selected checkboxes
+                StringBuilder methods = new StringBuilder("Analytical methods: ");
+                List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
+                        .filter(analysisCheckboxMap::get)
+                        .toList();
+                for (AnalysisType analysisType : selectedAnalysisTypes) {
+                    methods.append(analysisType.getAnalysisName()).append(", ");
+                }
+                if (methods.length() > 0) {
+                    methods.setLength(methods.length() - 2); // Remove the last comma and space
+                }
+                Paragraph analyticalMethods = new Paragraph(methods.toString())
+                        .setFont(calibriFont)
+                        .setFontSize(11);
+                document.add(analyticalMethods);
+
+                // Add spacing after analytical methods
+                document.add(new Paragraph("\n"));
+
+                // Add "Study: " followed by StudyName and studyDate
+                Paragraph studyDetails = new Paragraph("Study: " + study.getStudyName() + ", " + study.getStartDate().toString() + "-" + study.getEndDate().toString())
+                        .setFont(calibriFont)
+                        .setFontSize(11);
+                document.add(studyDetails);
+
+
+                // Add fields for details to the study (handwritten by user)
+                document.add(new Paragraph("\n"));
+                document.add(new Paragraph("Methodenvalidierung: ").setBold());
+                document.add(new Paragraph("\n"));
+                document.add(new Paragraph("Qualitätskontrolle: ").setBold());
+                document.add(new Paragraph("\n"));
+                document.add(new Paragraph("Bemerkungen: ").setBold());
+                document.add(new Paragraph("\n"));
+
+
+                // Add spacing after study details
+                document.add(new Paragraph("\n"));
+                document.add(new Paragraph("The results can be found on the following page(s).").setBold());
+                document.add(new Paragraph("\n"));
+                document.add(new Paragraph("The test report may not be reproduced without the written consent of the laboratory.").setBold());
+
+                // Add a page break here to start the table on a new page
+                document.add(new AreaBreak());
+
+
+                // Create the table with appropriate number of columns, including the numbering column
+                float[] tableColumnWidths = new float[selectedAnalysisTypes.size() + 2]; // +2 for numbering and sample ID
+                tableColumnWidths[0] = 1; // For numbering column
+                tableColumnWidths[1] = 2; // For Sample ID column, make it wider
+                for (int i = 2; i < tableColumnWidths.length; i++) {
+                    tableColumnWidths[i] = 1; // Make each analysis column narrower
+                }
+                Table table = new Table(tableColumnWidths);
+                table.setWidth(UnitValue.createPercentValue(100)); // Set the table width to 100% of the page
+
+                // Add table headers
+                table.addHeaderCell(new Cell().add(new Paragraph("No.")).setFont(calibriFont).setFontSize(11));
+                table.addHeaderCell(new Cell().add(new Paragraph("Sample ID")).setFont(calibriFont).setFontSize(11));
+                for (AnalysisType analysisType : selectedAnalysisTypes) {
+                    table.addHeaderCell(new Cell().add(new Paragraph(analysisType.getAnalysisName())).setFont(calibriFont).setFontSize(11));
+                }
+
+                // Add sample data to the table
+                List<Sample> samples = study.getListOfSamples();
+                for (int i = 0; i < samples.size(); i++) {
+                    Sample sample = samples.get(i);
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(i + 1))).setFont(calibriFont).setFontSize(11)); // Add numbering
+                    table.addCell(new Cell().add(new Paragraph(sample.getSample_barcode())).setFont(calibriFont).setFontSize(11));
+                    for (AnalysisType analysisType : selectedAnalysisTypes) {
+                        String result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                        table.addCell(new Cell().add(new Paragraph(result != null ? result : "")));
+                    }
+                }
+
+                // Add the table normally to follow the flow of the document
+                document.add(new Paragraph("Results: ").setBold());
+                document.add(table);
+                document.add(new Paragraph("\n"));
+
+                // Add "Textbaustein " followed by analysisName and description
+                for (AnalysisType analysisType : selectedAnalysisTypes) {
+                    Paragraph textbaustein = new Paragraph("Textbaustein " + analysisType.getAnalysisName() + ": " + analysisType.getAnalysisDescription())
+                            .setFont(calibriFont)
+                            .setFontSize(11);
+                    document.add(textbaustein);
+                    document.add(new Paragraph("\n")); // Add line break after each analysis type
+                }
+
+
+                // Add extra spacing before the final section
+                document.add(new Paragraph("\n"));
+
+                // Add the final section with "Technical validation" and "Final validation" in a table
+                float[] validationColumnWidths = {1, 1};
+                Table validationTable = new Table(validationColumnWidths);
+                validationTable.setWidth(UnitValue.createPercentValue(100));
+                validationTable.setBorder(null);
+
+                // Add validation headers
+                validationTable.addCell(new Cell().add(new Paragraph("Technical validation" + "\n\n\n")
+                                .setFont(calibriBoldFont)
+                                .setFontSize(11)
+                                .setBold())
+                        .setBorder(null)
+                        .setTextAlignment(TextAlignment.LEFT));
+
+                validationTable.addCell(new Cell().add(new Paragraph("Final validation" + "\n\n\n")
+                                .setFont(calibriBoldFont)
+                                .setFontSize(11)
+                                .setBold())
+                        .setBorder(null)
+                        .setTextAlignment(TextAlignment.RIGHT));
+
+                // Add signature lines
+                validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
                                 .setFont(calibriFont)
                                 .setFontSize(11))
-                        .setBorder(null));
+                        .setBorder(null)
+                        .setTextAlignment(TextAlignment.LEFT));
+
+                validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
+                                .setFont(calibriFont)
+                                .setFontSize(11))
+                        .setBorder(null)
+                        .setTextAlignment(TextAlignment.RIGHT));
+
+                document.add(validationTable);
+
+                document.close();
+                pdfDoc.close();
             }
         }
-
-        document.add(senderTable);
-
-        // Add a horizontal line separator
-        document.add(new LineSeparator(new SolidLine()));
-
-        // Add recipient addresses
-        Paragraph recipient = new Paragraph("Recipient Address:\n" + study.getSponsor())
-                .setFont(calibriFont)
-                .setFontSize(11);
-        document.add(recipient);
-
-        // Spacing
-        document.add(new Paragraph("\n"));
-
-        // Add "Date of Report Generation: " followed by the current date and time
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        Paragraph dateOfReport = new Paragraph("Date of Report Generation: " + now.format(formatter))
-                .setFont(calibriFont)
-                .setFontSize(11)
-                .setBold();
-        document.add(dateOfReport);
-
-        // Add spacing after recipient address
-        document.add(new Paragraph("\n"));
-
-        // Add "Report on the results of the serological analysis" in bold
-        Paragraph reportTitle = new Paragraph("Report on the results of the serological analysis")
-                .setFont(calibriBoldFont)
-                .setFontSize(11)
-                .setBold();
-        document.add(reportTitle);
-
-        // Add spacing after report title
-        document.add(new Paragraph("\n"));
-
-        // Add "Analytical methods: " followed by AnalysisTypeName for selected checkboxes
-        StringBuilder methods = new StringBuilder("Analytical methods: ");
-        List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
-                .filter(analysisCheckboxMap::get)
-                .toList();
-        for (AnalysisType analysisType : selectedAnalysisTypes) {
-            methods.append(analysisType.getAnalysisName()).append(", ");
-        }
-        if (methods.length() > 0) {
-            methods.setLength(methods.length() - 2); // Remove the last comma and space
-        }
-        Paragraph analyticalMethods = new Paragraph(methods.toString())
-                .setFont(calibriFont)
-                .setFontSize(11);
-        document.add(analyticalMethods);
-
-        // Add spacing after analytical methods
-        document.add(new Paragraph("\n"));
-
-        // Add "Study: " followed by StudyName and studyDate
-        Paragraph studyDetails = new Paragraph("Study: " + study.getStudyName() + ", " + study.getStartDate().toString() + "-" + study.getEndDate().toString())
-                .setFont(calibriFont)
-                .setFontSize(11);
-        document.add(studyDetails);
-
-
-        // Add fields for details to the study (handwritten by user)
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("Methodenvalidierung: ").setBold());
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("Qualitätskontrolle: ").setBold());
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("Bemerkungen: ").setBold());
-        document.add(new Paragraph("\n"));
-
-
-        // Add spacing after study details
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("The results can be found on the following page(s).").setBold());
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("The test report may not be reproduced without the written consent of the laboratory.").setBold());
-
-        // Add a page break here to start the table on a new page
-        document.add(new AreaBreak());
-
-
-        // Create the table with appropriate number of columns, including the numbering column
-        float[] tableColumnWidths = new float[selectedAnalysisTypes.size() + 2]; // +2 for numbering and sample ID
-        tableColumnWidths[0] = 1; // For numbering column
-        tableColumnWidths[1] = 2; // For Sample ID column, make it wider
-        for (int i = 2; i < tableColumnWidths.length; i++) {
-            tableColumnWidths[i] = 1; // Make each analysis column narrower
-        }
-        Table table = new Table(tableColumnWidths);
-        table.setWidth(UnitValue.createPercentValue(100)); // Set the table width to 100% of the page
-
-        // Add table headers
-        table.addHeaderCell(new Cell().add(new Paragraph("No.")).setFont(calibriFont).setFontSize(11));
-        table.addHeaderCell(new Cell().add(new Paragraph("Sample ID")).setFont(calibriFont).setFontSize(11));
-        for (AnalysisType analysisType : selectedAnalysisTypes) {
-            table.addHeaderCell(new Cell().add(new Paragraph(analysisType.getAnalysisName())).setFont(calibriFont).setFontSize(11));
-        }
-
-        // Add sample data to the table
-        List<Sample> samples = study.getListOfSamples();
-        for (int i = 0; i < samples.size(); i++) {
-            Sample sample = samples.get(i);
-            table.addCell(new Cell().add(new Paragraph(String.valueOf(i + 1))).setFont(calibriFont).setFontSize(11)); // Add numbering
-            table.addCell(new Cell().add(new Paragraph(sample.getSample_barcode())).setFont(calibriFont).setFontSize(11));
-            for (AnalysisType analysisType : selectedAnalysisTypes) {
-                String result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
-                table.addCell(new Cell().add(new Paragraph(result != null ? result : "")));
-            }
-        }
-
-        // Add the table normally to follow the flow of the document
-        document.add(new Paragraph("Results: ").setBold());
-        document.add(table);
-        document.add(new Paragraph("\n"));
-
-        // Add "Textbaustein " followed by analysisName and description
-        for (AnalysisType analysisType : selectedAnalysisTypes) {
-            Paragraph textbaustein = new Paragraph("Textbaustein " + analysisType.getAnalysisName() + ": " + analysisType.getAnalysisDescription())
-                    .setFont(calibriFont)
-                    .setFontSize(11);
-            document.add(textbaustein);
-            document.add(new Paragraph("\n")); // Add line break after each analysis type
-        }
-
-
-        // Add extra spacing before the final section
-        document.add(new Paragraph("\n"));
-
-        // Add the final section with "Technical validation" and "Final validation" in a table
-        float[] validationColumnWidths = {1, 1};
-        Table validationTable = new Table(validationColumnWidths);
-        validationTable.setWidth(UnitValue.createPercentValue(100));
-        validationTable.setBorder(null);
-
-        // Add validation headers
-        validationTable.addCell(new Cell().add(new Paragraph("Technical validation" + "\n\n\n")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(11)
-                        .setBold())
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.LEFT));
-
-        validationTable.addCell(new Cell().add(new Paragraph("Final validation" + "\n\n\n")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(11)
-                        .setBold())
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.RIGHT));
-
-        // Add signature lines
-        validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
-                        .setFont(calibriFont)
-                        .setFontSize(11))
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.LEFT));
-
-        validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
-                        .setFont(calibriFont)
-                        .setFontSize(11))
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.RIGHT));
-
-        document.add(validationTable);
-
-        document.close();
-        pdfDoc.close();
     }
-
 }
 
 

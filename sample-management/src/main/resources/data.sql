@@ -48,14 +48,15 @@ INSERT INTO sample (
     visits,
     subject_id,
     sample_delivery_id,
-    study_id
+    study_id,
+    validated
 ) VALUES
-      (1, '0,0', CURRENT_DATE, '10ml', 'ABC123', 'plasma', 1, 1, 1, 1),
-      (2, '1,1', CURRENT_DATE, '20ml', 'XYZ456', 'serum', 2, 1, 1, 1),
-      (3, '5,2', CURRENT_DATE, '100ml', 'ABCDEF123', 'plasma', 7, 2, 2, 2),
-      (4, '1,1', CURRENT_DATE, '20ml', 'XYZ45678', 'serum', 2, 3, 3, 3),
-      (5, '5,0', CURRENT_DATE, '80ml', 'ABCDEF12345', 'blood', 5, 3, 3, 3),
-      (6, '1,1', CURRENT_DATE, '200ml', 'XYZ458', 'plasma', 2, 4, 3, 3) on conflict do nothing;
+      (1, '0,0', CURRENT_DATE, '10ml', 'ABC123', 'plasma', 1, 1, 1, 1, true),
+      (2, '1,1', CURRENT_DATE, '20ml', 'XYZ456', 'serum', 2, 1, 1, 1, true),
+      (3, '5,2', CURRENT_DATE, '100ml', 'ABCDEF123', 'plasma', 7, 2, 2, 2, false),
+      (4, '1,1', CURRENT_DATE, '20ml', 'XYZ45678', 'serum', 2, 3, 3, 3, false),
+      (5, '5,0', CURRENT_DATE, '80ml', 'ABCDEF12345', 'blood', 5, 3, 3, 3, false),
+      (6, '1,1', CURRENT_DATE, '200ml', 'XYZ458', 'plasma', 2, 4, 3, 3, true) on conflict do nothing;
 
 
 -- Analyses
