@@ -55,8 +55,12 @@ public class AnalysisResultView extends HorizontalLayout {
                 ));
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
-            sampleGrid.addColumn(sample -> GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId()))
-                    .setHeader(analysisType.getAnalysisName());
+            sampleGrid.addColumn(sample -> {
+                Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                // Convert to string and handle null or blank
+                String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
+                return display;
+            }).setHeader(analysisType.getAnalysisName());
         }
 
         body.add(sampleGrid);

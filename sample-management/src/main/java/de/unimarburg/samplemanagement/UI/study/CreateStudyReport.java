@@ -9,10 +9,13 @@ import com.itextpdf.kernel.events.PdfDocumentEvent;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.*;
@@ -112,8 +115,12 @@ public class CreateStudyReport extends HorizontalLayout {
         }
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
-            sampleGrid.addColumn(sample -> GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId()))
-                    .setHeader(analysisType.getAnalysisName());
+            sampleGrid.addColumn(sample -> {
+                Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                // Convert to string and handle null or blank
+                String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
+                return display;
+            }).setHeader(analysisType.getAnalysisName());
         }
 
         body.add(sampleGrid);
@@ -185,14 +192,15 @@ public class CreateStudyReport extends HorizontalLayout {
                 });
 
                 // Add the download link to the UI
-                if (downloadLink != null) {
-                    remove(downloadLink);
+                if (downloadLink == null) {
+                    downloadLink = new Anchor(resource, "");
+                    downloadLink.getElement().setAttribute("download", "study_report.pdf");
+                    Button downloadButton = new Button("Download PDF");
+                    downloadLink.add(downloadButton);
+                    body.add(downloadLink);
+                } else {
+                    downloadLink.setHref(resource);  // just update the resource
                 }
-                downloadLink = new Anchor(resource, "");
-                downloadLink.getElement().setAttribute("download", true);
-                Button downloadButton = new Button("Download PDF");
-                downloadLink.add(downloadButton);
-                body.add(downloadLink);
             } catch (Exception e) {
                 Notification.show("Error generating PDF: " + e.getMessage());
                 e.printStackTrace();
@@ -213,23 +221,58 @@ public class CreateStudyReport extends HorizontalLayout {
     }
 
     public class HeaderFooterHandler implements IEventHandler {
-        protected Image logo;
+        private final Image logo;
+        private final PdfFormXObject placeholder;
+        private final PdfFont font;
+        private final int fontSize = 10;
 
-        public HeaderFooterHandler(Image logo) {
+        public HeaderFooterHandler(PdfDocument pdfDoc, Image logo, PdfFont font) {
             this.logo = logo;
+            this.font = font;
+            // Reserve space for total page number placeholder
+            this.placeholder = new PdfFormXObject(new Rectangle(0, 0, 20, 10));
         }
 
         @Override
         public void handleEvent(Event event) {
             PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
             PdfDocument pdfDoc = docEvent.getDocument();
-            PdfCanvas pdfCanvas = new PdfCanvas(docEvent.getPage());
-            Canvas canvas = new Canvas(pdfCanvas, pdfDoc, pdfDoc.getDefaultPageSize());
+            PdfPage page = docEvent.getPage();
+            int pageNumber = pdfDoc.getPageNumber(page);
+            Rectangle pageSize = page.getPageSize();
 
-            // Add the logo
-            logo.setFixedPosition((pdfDoc.getDefaultPageSize().getWidth() - logo.getImageScaledWidth()) / 2,
-                    pdfDoc.getDefaultPageSize().getTop() - logo.getImageScaledHeight() - 10);
+            Canvas canvas = new Canvas(new PdfCanvas(page, true), pdfDoc, pageSize);
+
+            // --- Add logo at top center ---
+            logo.setFixedPosition(
+                    (pageSize.getWidth() - logo.getImageScaledWidth()) / 2,
+                    pageSize.getTop() - logo.getImageScaledHeight() - 10
+            );
             canvas.add(logo);
+
+            // --- Page numbering: "Page X of Y" ---
+            Paragraph p = new Paragraph()
+                    .setFont(font)
+                    .setFontSize(fontSize)
+                    .add("Page " + pageNumber + " of ")
+                    .add(new Image(placeholder)); // Placeholder for total pages
+
+            canvas.showTextAligned(p,
+                    pageSize.getRight() - 60,  // right margin
+                    pageSize.getTop() - 20,   // from top
+                    TextAlignment.RIGHT);
+
+            canvas.close();
+        }
+
+        // Call this after closing the document to fill in total pages
+        public void writeTotal(PdfDocument pdfDoc) {
+            Canvas canvas = new Canvas(placeholder, pdfDoc);
+            canvas.showTextAligned(
+                    new Paragraph(String.valueOf(pdfDoc.getNumberOfPages()))
+                            .setFont(font)
+                            .setFontSize(fontSize),
+                    0, -3, TextAlignment.LEFT);
             canvas.close();
         }
     }
@@ -262,7 +305,11 @@ public class CreateStudyReport extends HorizontalLayout {
                         .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
                 // Set the header handler
-                pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new HeaderFooterHandler(logoImage));
+                // Create a placeholder object
+                PdfFormXObject placeholder = new PdfFormXObject(new Rectangle(50, 12));
+
+                HeaderFooterHandler handler = new HeaderFooterHandler(pdfDoc, logoImage, calibriFont);
+                pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, handler);
 
                 // Set the default font for the document
                 document.setFont(calibriFont);
@@ -317,7 +364,7 @@ public class CreateStudyReport extends HorizontalLayout {
 
                 // Add "Date of Report Generation: " followed by the current date and time
                 LocalDateTime now = LocalDateTime.now();
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                 Paragraph dateOfReport = new Paragraph("Date of Report Generation: " + now.format(formatter))
                         .setFont(calibriFont)
                         .setFontSize(11)
@@ -365,11 +412,11 @@ public class CreateStudyReport extends HorizontalLayout {
 
                 // Add fields for details to the study (handwritten by user)
                 document.add(new Paragraph("\n"));
-                document.add(new Paragraph("Methodenvalidierung: ").setBold());
+                document.add(new Paragraph("Method validation: ").setBold());
                 document.add(new Paragraph("\n"));
-                document.add(new Paragraph("Qualitätskontrolle: ").setBold());
+                document.add(new Paragraph("Quality control: ").setBold());
                 document.add(new Paragraph("\n"));
-                document.add(new Paragraph("Bemerkungen: ").setBold());
+                document.add(new Paragraph("Remarks: ").setBold());
                 document.add(new Paragraph("\n"));
 
 
@@ -407,8 +454,10 @@ public class CreateStudyReport extends HorizontalLayout {
                     table.addCell(new Cell().add(new Paragraph(String.valueOf(i + 1))).setFont(calibriFont).setFontSize(11)); // Add numbering
                     table.addCell(new Cell().add(new Paragraph(sample.getSample_barcode())).setFont(calibriFont).setFontSize(11));
                     for (AnalysisType analysisType : selectedAnalysisTypes) {
-                        String result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
-                        table.addCell(new Cell().add(new Paragraph(result != null ? result : "")));
+                        Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                        // Convert to string and handle null or blank
+                        String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
+                        table.addCell(new Cell().add(new Paragraph(display)));
                     }
                 }
 
@@ -419,8 +468,9 @@ public class CreateStudyReport extends HorizontalLayout {
 
                 // Add "Textbaustein " followed by analysisName and description
                 for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    Paragraph textbaustein = new Paragraph("Textbaustein " + analysisType.getAnalysisName() + ": " + analysisType.getAnalysisDescription())
+                    Paragraph textbaustein = new Paragraph(analysisType.getAnalysisName() + ": " + analysisType.getAnalysisDescription())
                             .setFont(calibriFont)
+                            .setBold()
                             .setFontSize(11);
                     document.add(textbaustein);
                     document.add(new Paragraph("\n")); // Add line break after each analysis type
@@ -428,7 +478,7 @@ public class CreateStudyReport extends HorizontalLayout {
 
 
                 // Add extra spacing before the final section
-                document.add(new Paragraph("\n"));
+                document.add(new Paragraph("\n\n\n"));
 
                 // Add the final section with "Technical validation" and "Final validation" in a table
                 float[] validationColumnWidths = {1, 1};
@@ -465,6 +515,17 @@ public class CreateStudyReport extends HorizontalLayout {
                         .setTextAlignment(TextAlignment.RIGHT));
 
                 document.add(validationTable);
+
+//                placeholder.getResources();
+//                PdfCanvas canvas = new PdfCanvas(placeholder, pdfDoc);
+//                canvas.getResources(); // ensures resources map is initialized
+//                canvas.beginText()
+//                        .setFontAndSize(calibriFont, 10)
+//                        .moveText(0,0)
+//                        .showText(String.valueOf(pdfDoc.getNumberOfPages()))
+//                        .endText();
+//                canvas.release();
+                handler.writeTotal(pdfDoc); // then write total page count into placeholder
 
                 document.close();
                 pdfDoc.close();

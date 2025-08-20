@@ -50,7 +50,11 @@ public class Study {
     private List<SampleDelivery> sampleDeliveryList = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @UniqueElements
+    @JoinTable(
+            name = "study_analysis_types",
+            joinColumns = @JoinColumn(name = "study_id"),
+            inverseJoinColumns = @JoinColumn(name = "analysis_types_id")
+    )
     private Set<AnalysisType> analysisTypes = new HashSet<>();
 
     public int getNumberOfSubjects() {
