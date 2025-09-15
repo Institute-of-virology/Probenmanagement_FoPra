@@ -63,7 +63,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         if (selectedSample.getSample_amount() == null || selectedSample.getSample_amount().isBlank()) {
             return false;
         }
-        if (selectedSample.getSampleDate() == null) {
+        if (selectedSample.getDateOfShipment() == null) {
             return false;
         }
         return true;
@@ -80,7 +80,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         Grid.Column<Sample> barcodeColumn = sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode").setSortable(true);
         Grid.Column<Sample> typeColumn = sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type").setSortable(true);
         Grid.Column<Sample> amountColumn = sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount (in μl)").setSortable(true);
-        Grid.Column<Sample> dateColumn = sampleGrid.addColumn(Sample::getSampleDate).setHeader("Sample Date").setSortable(true).setRenderer(GENERAL_UTIL.renderDate());
+        Grid.Column<Sample> dateColumn = sampleGrid.addColumn(Sample::getDateOfShipment).setHeader("Sample Date").setSortable(true).setRenderer(GENERAL_UTIL.renderDate());
         Grid.Column<Sample> sampleDelivery = sampleGrid.addColumn(sample -> {
             SampleDelivery sampleDelivery1 = sample.getSampleDelivery();
             if (sampleDelivery1 == null) {
@@ -118,7 +118,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         DatePicker dateField = new DatePicker();
         binder.forField(dateField)
                 .withConverter(new LocalDateToDateConverter())
-                .bind(Sample::getSampleDate, Sample::setSampleDate);
+                .bind(Sample::getDateOfShipment, Sample::setDateOfShipment);
         dateColumn.setEditorComponent(dateField);
 
         NumberField sampleDeliveryField = new NumberField();

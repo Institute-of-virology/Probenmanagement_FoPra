@@ -39,11 +39,21 @@ public class Sample {
 
     private String coordinates;
     private int visits;
-    private Date sampleDate;
+    // Renamed from sampleDate → dateOfShipment
+    @Column(name = "date_of_shipment")
+    private Date dateOfShipment;
+
     private String sample_amount;
     private String sample_barcode;
     private String sample_type;
+    // Boolean flag
+    @Column(name = "validated")
     private boolean validated;
+
+    // New column for the timestamp of validation
+    @Column(name = "validated_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date validatedAt;
 
     @OneToMany(mappedBy = "sample", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Analysis> listOfAnalysis;

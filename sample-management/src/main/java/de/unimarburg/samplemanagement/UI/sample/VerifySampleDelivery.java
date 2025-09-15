@@ -22,6 +22,7 @@ import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -170,6 +171,7 @@ public class VerifySampleDelivery extends HorizontalLayout {
     private void verificationSuccess() {
         Sample selectedSample = sampleGrid.getSelectedItems().iterator().next();
         selectedSample.setValidated(true);
+        selectedSample.setValidatedAt(new Date()); // current timestamp
         sampleService.save(selectedSample);
 
         updateSampleLists();
