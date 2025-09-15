@@ -66,6 +66,25 @@ public class VerifySampleDelivery extends HorizontalLayout {
         add(content);
     }
 
+    private String ordinal(int n) {
+        return switch (n) {
+            case 0 -> "First";
+            case 1 -> "Second";
+            case 2 -> "Third";
+            default -> (n + 1) + getSuffix(n + 1);
+        };
+    }
+
+    private String getSuffix(int n) {
+        if (n % 100 >= 11 && n % 100 <= 13) return "th";
+        return switch (n % 10) {
+            case 1 -> "st";
+            case 2 -> "nd";
+            case 3 -> "rd";
+            default -> "th";
+        };
+    }
+
     private void initContent() {
         content = new VerticalLayout();
 
@@ -75,7 +94,7 @@ public class VerifySampleDelivery extends HorizontalLayout {
         deliveryFilter.setLabel("Select Delivery to verify");
         deliveryFilter.setItems(study.getSampleDeliveryList());
         deliveryFilter.setEmptySelectionAllowed(true);
-        deliveryFilter.setRenderer(new TextRenderer<>(sd -> String.valueOf(sd.getRunningNumber())));
+        deliveryFilter.setRenderer(new TextRenderer<>(sd -> ordinal(sd.getRunningNumber()) + " delivery"));
         deliveryFilter.setValue(sampleDelivery);
         deliveryFilter.addValueChangeListener(e -> {
             sampleDelivery = e.getValue();
