@@ -25,6 +25,7 @@ import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -80,7 +81,22 @@ public class ManualSampleEditing extends HorizontalLayout {
         Grid.Column<Sample> barcodeColumn = sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode").setSortable(true);
         Grid.Column<Sample> typeColumn = sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type").setSortable(true);
         Grid.Column<Sample> amountColumn = sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount (in μl)").setSortable(true);
-        Grid.Column<Sample> dateColumn = sampleGrid.addColumn(Sample::getDateOfShipment).setHeader("Sample Date").setSortable(true).setRenderer(GENERAL_UTIL.renderDate());
+        Grid.Column<Sample> shipmentDateColumn = sampleGrid
+                .addColumn(Sample::getDateOfShipment)
+                .setHeader("Date of Shipment")
+                .setSortable(true)
+                .setRenderer(GENERAL_UTIL.renderDate());
+        Grid.Column<Sample> validatedAtColumn = sampleGrid
+                .addColumn(sample -> {
+                    if (sample.isValidated() && sample.getValidatedAt() != null) {
+                        return new SimpleDateFormat("dd.MM.yyyy").format(sample.getValidatedAt());
+                    } else {
+                        return "Not validated";
+                    }
+                })
+                .setHeader("Validated At")
+                .setSortable(true);
+
         Grid.Column<Sample> sampleDelivery = sampleGrid.addColumn(sample -> {
             SampleDelivery sampleDelivery1 = sample.getSampleDelivery();
             if (sampleDelivery1 == null) {
@@ -88,12 +104,6 @@ public class ManualSampleEditing extends HorizontalLayout {
             }
             return sample.getSampleDelivery().getRunningNumber();
         }).setHeader("Sample Delivery").setSortable(true);
-        Grid.Column<Sample> subjectAliasColumn = sampleGrid.addColumn(sample -> {
-            if (sample.getSubject() == null) {
-                return null;
-            }
-            return sample.getSubject().getAlias();
-        }).setHeader("Subject Alias").setSortable(true);
         Grid.Column<Sample> coordinatesColumn = sampleGrid.addColumn(Sample::getCoordinates).setHeader("Coordinates").setSortable(true);
 
         // Create the editor and its binder
@@ -115,11 +125,12 @@ public class ManualSampleEditing extends HorizontalLayout {
         binder.bind(amountField, Sample::getSample_amount, Sample::setSample_amount);
         amountColumn.setEditorComponent(amountField);
 
-        DatePicker dateField = new DatePicker();
-        binder.forField(dateField)
+        // Editor for shipment date
+        DatePicker shipmentDateField = new DatePicker();
+        binder.forField(shipmentDateField)
                 .withConverter(new LocalDateToDateConverter())
                 .bind(Sample::getDateOfShipment, Sample::setDateOfShipment);
-        dateColumn.setEditorComponent(dateField);
+        shipmentDateColumn.setEditorComponent(shipmentDateField);
 
         NumberField sampleDeliveryField = new NumberField();
         sampleDeliveryField.setMin(0);
@@ -168,7 +179,6 @@ public class ManualSampleEditing extends HorizontalLayout {
                     }
                     sample.setSubject(subject);
                 });
-        subjectAliasColumn.setEditorComponent(subjectIdField);
 
         TextField coordinatesField = new TextField();
         binder.bind(coordinatesField, Sample::getCoordinates, Sample::setCoordinates);
