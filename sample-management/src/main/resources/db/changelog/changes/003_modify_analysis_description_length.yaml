@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3
+      author: gemini
+      changes:
+        - modifyDataType:
+            tableName: analysis_type
+            columnName: analysis_description
+            newDataType: TEXT
+      rollback:
+        - modifyDataType:
+            tableName: analysis_type
+            columnName: analysis_description
+            newDataType: VARCHAR(255)

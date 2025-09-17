@@ -53,26 +53,32 @@ public class AddAnalysisToStudy extends HorizontalLayout {
     private VerticalLayout loadContent() {
         VerticalLayout body = new VerticalLayout();
 
-// ------------------------------
-// Create new AnalysisType
-// ------------------------------
+        // ------------------------------
+        // Create new AnalysisType
+        // ------------------------------
         VerticalLayout addAnalysisLayout = new VerticalLayout();
         addAnalysisLayout.setPadding(true);
         addAnalysisLayout.setSpacing(true);
         addAnalysisLayout.setWidth("500px");
 
-// Bigger Analysis Name field
+        // Bigger Analysis Name field
         TextField analysisName = new TextField("Analysis Name");
         analysisName.setWidthFull();
         analysisName.setPlaceholder("Enter analysis name");
 
-// Multi-line Analysis Description
+        // Multi-line Analysis Description
         TextArea analysisDescription = new TextArea("Analysis Description");
         analysisDescription.setWidthFull();
         analysisDescription.setPlaceholder("Enter analysis description...");
         analysisDescription.setHeight("150px");
 
-// Add button
+        // New Analysis Unit field
+        TextField analysisUnit = new TextField("Analysis Unit");
+        analysisUnit.setWidthFull();
+        analysisUnit.setPlaceholder("e.g. mg/L, cells/mL");
+
+
+        // Add button
         Button addAnalysisButton = new Button("Create new Analysis Type");
         addAnalysisButton.addClickListener(buttonClickEvent -> {
             //check validity
@@ -84,6 +90,7 @@ public class AddAnalysisToStudy extends HorizontalLayout {
             AnalysisType analysisType = new AnalysisType();
             analysisType.setAnalysisName(analysisName.getValue());
             analysisType.setAnalysisDescription(analysisDescription.getValue());
+            analysisType.setAnalysisUnit(analysisUnit.getValue()); // <-- NEW
             analysisType = analysisTypeRepository.save(analysisType);
             study.getAnalysisTypes().add(analysisType);
             studyService.save(study);
@@ -99,7 +106,7 @@ public class AddAnalysisToStudy extends HorizontalLayout {
             Notification.show("Analysis Type added successfully");
         });
 
-        addAnalysisLayout.add(analysisName, analysisDescription, addAnalysisButton);
+        addAnalysisLayout.add(analysisName, analysisDescription, analysisUnit, addAnalysisButton);
         body.add(addAnalysisLayout);
         body.add(new Text("--------------------------------------------------------------------------------------------------------------------------"));
 
@@ -111,6 +118,7 @@ public class AddAnalysisToStudy extends HorizontalLayout {
         analysisTypeGrid.setItems(analysisTypeRepository.findAll());
         analysisTypeGrid.addColumn(AnalysisType::getAnalysisName).setHeader("Analysis Name");
         analysisTypeGrid.addColumn(AnalysisType::getAnalysisDescription).setHeader("Analysis Description");
+        analysisTypeGrid.addColumn(AnalysisType::getAnalysisUnit).setHeader("Analysis Unit");
 
         // Add Analysis button
         analysisTypeGrid.addComponentColumn(analysisType -> {
