@@ -58,10 +58,12 @@ public class Sample {
     @OneToMany(mappedBy = "sample", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Analysis> listOfAnalysis;
 
+    @Transient
     public String getStudyName() {
         return study != null ? study.getName() : null;
     }
 
+    @Transient
     public Long getSubjectAlias() {
         return subject != null ? subject.getAlias() : null;
     }

@@ -26,6 +26,7 @@ public class SampleDelivery {
 
     private String boxNumber;
 
+    @Transient
     public int getRunningNumber() {
         List<SampleDelivery> sampleDeliveries = study.getSampleDeliveryList();
         return sampleDeliveries.indexOf(this);

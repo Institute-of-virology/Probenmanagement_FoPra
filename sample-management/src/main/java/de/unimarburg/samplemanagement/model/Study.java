@@ -57,10 +57,12 @@ public class Study {
     )
     private Set<AnalysisType> analysisTypes = new HashSet<>();
 
+    @Transient
     public int getNumberOfSubjects() {
         return listOfSubjects.size();
     }
 
+    @Transient
     public List<Sample> getListOfSamples() {
         return listOfSubjects.stream()
                 .map(Subject::getListOfSamples)
@@ -68,6 +70,7 @@ public class Study {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
+    @Transient
     public String getName() {
         return studyName;
     }
