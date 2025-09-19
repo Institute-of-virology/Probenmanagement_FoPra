@@ -79,17 +79,10 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         //add checkbox for each analysis type
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
             sampleGrid.addComponentColumn(sample -> {
-                Button button = new Button("");
-                if (sample.getListOfAnalysis().stream().anyMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()))) {
-                    setButtonAddMode(button);
-                } else {
-                    setButtonRemoveMode(button);
-                }
-
-                // Set button mode on creation
+                Button button = new Button();
                 boolean analysisExists = sample.getListOfAnalysis().stream()
-                        .anyMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()) &&
-                                a.getSample().getId().equals(sample.getId()));
+                        .anyMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
+
                 if (analysisExists) {
                     setButtonRemoveMode(button);
                 } else {
@@ -97,21 +90,18 @@ public class AddAnalysisToSamples extends HorizontalLayout {
                 }
 
                 button.addClickListener(e -> {
-                    if ("Add".equals(button.getText())) {
-                        sample.getListOfAnalysis().add(new Analysis(analysisType, sample));
-                        sampleRepository.save(sample);
-                        setButtonRemoveMode(button);
-                    } else if ("Remove".equals(button.getText())) {
-                        sample.getListOfAnalysis().removeIf(a ->
-                                a.getAnalysisType().getId().equals(analysisType.getId())
-                        );
-                        sampleRepository.save(sample);
+                    boolean exists = sample.getListOfAnalysis().stream()
+                            .anyMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
 
-                        refreshSampleGrid();
-                        setButtonAddMode(button);
+                    if (exists) {
+                        // Remove analysis
+                        sample.getListOfAnalysis().removeIf(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
                     } else {
-                        throw new RuntimeException("Unexpected button text: " + button.getText());
+                        // Add analysis
+                        sample.getListOfAnalysis().add(new Analysis(analysisType, sample));
                     }
+                    sampleRepository.save(sample);
+                    refreshSampleGrid();
                 });
 
                 return button;
@@ -148,11 +138,29 @@ public class AddAnalysisToSamples extends HorizontalLayout {
                         }
                     }
                 }
-                sampleGrid.getDataProvider().refreshAll();
+                refreshSampleGrid();
             });
             add_all_buttons.add(button);
         }
         filterLayout.add(DISPLAY_UTILS.getBoxAlignment(add_all_buttons.toArray(new Button[0])));
+
+        //remove-all buttons
+        List<Button> remove_all_buttons = new ArrayList<>();
+        for (AnalysisType analysisType : uniqueAnalysisTypes) {
+            Button button = new Button("Remove all " + analysisType.getAnalysisName());
+            button.getStyle().set("background-color", "red");
+            button.addClickListener(e -> {
+                for (Sample sample : study.getListOfSamples()) {
+                    if (deliveryFilter.getValue() == null || deliveryFilter.getValue().getSamples().contains(sample)) {
+                        sample.getListOfAnalysis().removeIf(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
+                        sampleRepository.save(sample);
+                    }
+                }
+                refreshSampleGrid();
+            });
+            remove_all_buttons.add(button);
+        }
+        filterLayout.add(DISPLAY_UTILS.getBoxAlignment(remove_all_buttons.toArray(new Button[0])));
 
 
         body.add(filterLayout);
