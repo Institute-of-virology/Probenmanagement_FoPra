@@ -15,6 +15,7 @@ import de.unimarburg.samplemanagement.service.SampleService;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -105,6 +106,7 @@ public class SampleView extends HorizontalLayout {
                     }
                     return matchesBarcode && matchesStudyName && matchesSubjectAlias;
                 })
+                .sorted(java.util.Comparator.comparing(Sample::getId))
                 .collect(Collectors.toList());
 
         grid.setItems(samples);

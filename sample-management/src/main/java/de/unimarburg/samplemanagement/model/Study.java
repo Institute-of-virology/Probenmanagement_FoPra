@@ -44,6 +44,7 @@ public class Study {
     private Date endDate;
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Subject> listOfSubjects = new ArrayList<>();
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)

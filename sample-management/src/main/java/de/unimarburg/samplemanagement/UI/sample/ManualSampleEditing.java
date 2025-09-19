@@ -73,7 +73,7 @@ public class ManualSampleEditing extends HorizontalLayout {
     private VerticalLayout getContent() {
         VerticalLayout body = new VerticalLayout();
         Grid<Sample> sampleGrid = new Grid<>();
-        List<Sample> samples = sampleRepository.getSampleByStudyId(clientStateService.getClientState().getSelectedStudy().getId());
+        List<Sample> samples = sampleRepository.getSampleByStudyIdOrderByIdAsc(clientStateService.getClientState().getSelectedStudy().getId());
         sampleGrid.setItems(samples);
 
 

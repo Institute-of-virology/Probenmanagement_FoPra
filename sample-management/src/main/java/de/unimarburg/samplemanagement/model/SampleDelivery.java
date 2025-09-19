@@ -19,6 +19,7 @@ public class SampleDelivery {
     Study study;
 
     @OneToMany(mappedBy = "sampleDelivery", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Sample> samples;
 
     @Temporal(TemporalType.DATE)
