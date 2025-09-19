@@ -36,6 +36,10 @@ public class StudyService {
         studyRepository.save(study);
     }
 
+    public long countByAnalysisTypesContaining(AnalysisType analysisType){
+        return studyRepository.countByAnalysisTypesContaining(analysisType);
+    }
+
     public List<Study> findByNameAndBirthDate(String nameFilter, String dateFilter) {
         boolean hasName = nameFilter != null && !nameFilter.isEmpty();
         boolean hasDate = dateFilter != null && !dateFilter.isEmpty();

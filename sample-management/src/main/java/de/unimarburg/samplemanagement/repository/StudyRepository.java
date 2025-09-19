@@ -1,6 +1,7 @@
 package de.unimarburg.samplemanagement.repository;
 
 import de.unimarburg.samplemanagement.model.Study;
+import de.unimarburg.samplemanagement.model.AnalysisType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,4 +37,5 @@ public interface StudyRepository extends JpaRepository<Study, Long> {
         return study.getId();
     }
 
+    long countByAnalysisTypesContaining(AnalysisType analysisType);
 }
