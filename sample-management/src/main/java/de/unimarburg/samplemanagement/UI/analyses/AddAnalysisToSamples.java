@@ -130,14 +130,16 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
             Button button = new Button("Add all " + analysisType.getAnalysisName());
             button.addClickListener(e -> {
+                List<Sample> samplesToUpdate = new ArrayList<>();
                 for (Sample sample : study.getListOfSamples()) {
                     if (deliveryFilter.getValue() == null || deliveryFilter.getValue().getSamples().contains(sample)) {
                         if (sample.getListOfAnalysis().stream().noneMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()))) {
                             sample.getListOfAnalysis().add(new Analysis(analysisType, sample));
-                            sampleRepository.save(sample);
+                            samplesToUpdate.add(sample);
                         }
                     }
                 }
+                sampleRepository.saveAll(samplesToUpdate);
                 refreshSampleGrid();
             });
             add_all_buttons.add(button);
