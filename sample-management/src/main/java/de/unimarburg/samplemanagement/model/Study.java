@@ -58,6 +58,15 @@ public class Study {
     )
     private Set<AnalysisType> analysisTypes = new HashSet<>();
 
+    @Column(columnDefinition = "TEXT")
+    private String methodValidation;
+
+    @Column(columnDefinition = "TEXT")
+    private String qualityControl;
+
+    @Column(columnDefinition = "TEXT")
+    private String remarks;
+
     @Transient
     public int getNumberOfSubjects() {
         return listOfSubjects.size();
