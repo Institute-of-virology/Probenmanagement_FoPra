@@ -36,6 +36,7 @@ import de.unimarburg.samplemanagement.model.*;
 import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
 import de.unimarburg.samplemanagement.repository.ReportAuthorRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
+import de.unimarburg.samplemanagement.utils.FORMAT_UTILS;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.apache.commons.io.IOUtils;
@@ -150,7 +151,7 @@ public class CreateStudyReport extends HorizontalLayout {
         sampleDeliveries.sort(Comparator.comparing(SampleDelivery::getRunningNumber));
         for (SampleDelivery sampleDelivery : sampleDeliveries) {
             Checkbox checkbox = new Checkbox();
-            Div labelRunningNumber = new Div("Delivery " + sampleDelivery.getRunningNumber());
+            Div labelRunningNumber = new Div(FORMAT_UTILS.getOrdinal(sampleDelivery.getRunningNumber()) + " delivery");
             Div labelDate = new Div(new SimpleDateFormat("dd.MM.yyyy").format(sampleDelivery.getDeliveryDate()));
             VerticalLayout labelLayout = new VerticalLayout(checkbox, labelRunningNumber, labelDate);
 
