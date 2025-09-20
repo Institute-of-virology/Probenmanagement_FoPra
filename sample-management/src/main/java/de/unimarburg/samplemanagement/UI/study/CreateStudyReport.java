@@ -159,6 +159,7 @@ public class CreateStudyReport extends HorizontalLayout {
             analysisCheckboxMap.put(analysisType, checkbox.getValue());
             checkbox.addValueChangeListener(event -> {
                 analysisCheckboxMap.put(analysisType, event.getValue());
+                updateGridItems();
             });
             analysisSelectionLayout.add(new HorizontalLayout(checkbox, labelDiv));
         }
@@ -169,13 +170,13 @@ public class CreateStudyReport extends HorizontalLayout {
         List<SampleDelivery> sampleDeliveries = study.getSampleDeliveryList();
         sampleDeliveries.sort(Comparator.comparing(SampleDelivery::getRunningNumber));
         for (SampleDelivery sampleDelivery : sampleDeliveries) {
-            Checkbox checkbox = new Checkbox();
+            Checkbox checkbox = new Checkbox(true);
             Div labelRunningNumber = new Div(FORMAT_UTILS.getOrdinal(sampleDelivery.getRunningNumber()) + " delivery");
             Div labelDate = new Div(new SimpleDateFormat("dd.MM.yyyy").format(sampleDelivery.getDeliveryDate()));
             sampleDeliveriesCheckboxMap.put(sampleDelivery, checkbox.getValue());
             checkbox.addValueChangeListener(event -> {
                 sampleDeliveriesCheckboxMap.put(sampleDelivery, event.getValue());
-                updateSampleGrid(sampleDeliveries.stream().filter(sampleDeliveriesCheckboxMap::get).toList());
+                updateGridItems();
             });
             deliverySelectionLayout.add(new HorizontalLayout(checkbox, labelRunningNumber, labelDate));
         }
@@ -289,12 +290,35 @@ public class CreateStudyReport extends HorizontalLayout {
     }
 
 
-    private void updateSampleGrid(List<SampleDelivery> sampleDeliveries) {
-        List<Sample> samples = new ArrayList<>();
-        for (SampleDelivery sampleDelivery : sampleDeliveries) {
-            samples.addAll(sampleDelivery.getSamples());
+    private void updateGridItems() {
+        List<SampleDelivery> selectedDeliveries = study.getSampleDeliveryList().stream()
+                .filter(delivery -> sampleDeliveriesCheckboxMap.getOrDefault(delivery, false))
+                .toList();
+
+        List<Sample> samplesToFilter = selectedDeliveries.stream()
+                .flatMap(delivery -> delivery.getSamples().stream())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
+                .filter(analysisType -> analysisCheckboxMap.getOrDefault(analysisType, true))
+                .toList();
+
+        long totalAnalyses = analysisCheckboxMap.keySet().size();
+        if (selectedAnalysisTypes.size() < totalAnalyses) {
+            if (!selectedAnalysisTypes.isEmpty()) {
+                samplesToFilter = samplesToFilter.stream()
+                        .filter(sample -> selectedAnalysisTypes.stream()
+                                .anyMatch(analysisType -> {
+                                    Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                                    return result != null && !result.toString().isBlank();
+                                }))
+                        .collect(java.util.stream.Collectors.toList());
+            } else {
+                samplesToFilter.clear();
+            }
         }
-        sampleGrid.setItems(samples);
+        sampleGrid.setItems(samplesToFilter);
     }
 
     public class HeaderFooterHandler implements IEventHandler {
@@ -376,7 +400,7 @@ public class CreateStudyReport extends HorizontalLayout {
                 byte[] logoBytes = IOUtils.toByteArray(logoStream);
                 ImageData logoImageData = ImageDataFactory.create(logoBytes);
                 Image logoImage = new Image(logoImageData)
-                        .scaleToFit(100, 100)
+                        .scaleToFit(150, 150)
                         .setHorizontalAlignment(HorizontalAlignment.CENTER);
 
                 HeaderFooterHandler handler = new HeaderFooterHandler(pdfDoc, logoImage, calibriFont);
@@ -398,7 +422,7 @@ public class CreateStudyReport extends HorizontalLayout {
                 float[] columnWidths = {3, 3, 4};
                 Table senderTable = new Table(columnWidths);
                 senderTable.setWidth(UnitValue.createPercentValue(100));
-
+                this.reportAuthors = reportAuthorRepository.findAll();
                 for (int i = 0; i < reportAuthors.size(); i++) {
                     ReportAuthor reportAuthor = reportAuthors.get(i);
                     String authorInfo = reportAuthor.getName() + ", " + reportAuthor.getTitle();
@@ -453,7 +477,10 @@ public class CreateStudyReport extends HorizontalLayout {
                         .setMargins(10, 0, 5, 0); // add top margin
                 document.add(analyticalMethods);
 
-                Paragraph studyDetails = new Paragraph("Study: " + study.getStudyName() + ", " + study.getStartDate().toString() + "-" + study.getEndDate().toString())
+                Paragraph studyDetails = new Paragraph()
+                        .add("Study: ")
+                        .add(new Text(study.getStudyName()).setBold())
+                        .add(", " + study.getStartDate().toString() + "-" + study.getEndDate().toString())
                         .setFont(calibriFont)
                         .setFontSize(10)
                         .setMargins(10, 0, 5, 0); // add top margin
@@ -543,7 +570,7 @@ public class CreateStudyReport extends HorizontalLayout {
                             .setFont(calibriFont)
                             .setBold()
                             .setFontSize(10)
-                            .setMargins(20, 0, 10, 0);
+                            .setMargins(10, 0, 10, 0);
                     document.add(textbaustein);
                 }
 
@@ -558,6 +585,7 @@ public class CreateStudyReport extends HorizontalLayout {
                                 .setFont(calibriBoldFont)
                                 .setFontSize(10)
                                 .setBold())
+                        .setMargins(10, 0, 0, 0)
                         .setBorder(null)
                         .setTextAlignment(TextAlignment.LEFT));
 

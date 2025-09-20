@@ -21,6 +21,7 @@ import de.unimarburg.samplemanagement.model.SampleDelivery;
 import de.unimarburg.samplemanagement.model.Study;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.ExcelTemplateFiller;
+import de.unimarburg.samplemanagement.utils.FORMAT_UTILS;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -78,7 +79,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
         deliveryFilter.setLabel("Filter by Delivery");
         deliveryFilter.setItems(study.getSampleDeliveryList());
         deliveryFilter.setEmptySelectionAllowed(true);
-        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> String.valueOf(sampleDelivery.getRunningNumber())));
+        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> FORMAT_UTILS.getOrdinal(sampleDelivery.getRunningNumber()) + " delivery"));
         deliveryFilter.addValueChangeListener(e -> {
             if (e.getValue() != null) {
                 sampleGrid.setItems(e.getValue().getSamples());
