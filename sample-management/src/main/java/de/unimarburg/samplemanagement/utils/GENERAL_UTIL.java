@@ -60,7 +60,7 @@ public class GENERAL_UTIL {
     }
 
     public static Renderer<Sample> renderDate() {
-        return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getSampleDate()), "dd.MM.yyyy");
+        return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getDateOfShipment()), "dd.MM.yyyy");
     }
 
 

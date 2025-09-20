@@ -9,6 +9,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.time.LocalDate;
@@ -19,9 +20,8 @@ import java.util.Optional;
 
 public class ExcelTemplateFiller {
 
-    public static void fillTemplate(InputStream templateInputStream, String outputPath, Map<String, String> data, ArrayList<Sample> samples, Study study, LocalDate date) {
-        try (XSSFWorkbook workbook = new XSSFWorkbook(templateInputStream);
-             FileOutputStream os = new FileOutputStream(outputPath)) {
+    public static void fillTemplate(InputStream templateInputStream, ByteArrayOutputStream baos, Map<String, String> data, ArrayList<Sample> samples, Study study, LocalDate date) {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(templateInputStream)) {
 
             XSSFSheet sheet = workbook.getSheetAt(0);
 
@@ -108,10 +108,8 @@ public class ExcelTemplateFiller {
 
             }
 
-
-
             // Write changes to the output file
-            workbook.write(os);
+            workbook.write(baos);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -132,6 +130,6 @@ public class ExcelTemplateFiller {
                 return s;
             }
         }
-        throw new RuntimeException("Analysis findByName failed!");
+        throw new RuntimeException("Analysis findByName failed! Could not find analysis with name: " + name);
     }
 }

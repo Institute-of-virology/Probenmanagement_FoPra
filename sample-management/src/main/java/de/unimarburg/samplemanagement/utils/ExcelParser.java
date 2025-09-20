@@ -121,7 +121,7 @@ public class ExcelParser {
             sample.setCoordinates(coordinates);
 
             sample.setSubject(defaultSubject);
-            sample.setSampleDate(deliveryDate);
+            sample.setDateOfShipment(deliveryDate);
             sample.setStudy(study);
 
             // Barcode (Column C = index 2)
@@ -300,9 +300,9 @@ public class ExcelParser {
             String barcode = entry.getKey();
             Analysis analysis = findCorrectAnalysis(relevantAnalyses, barcode);
             analysis.setAnalysisResult(entry.getValue());
-            // ✅ Set delivery date to the corresponding sample
+            // Set delivery date to the corresponding sample
             if (analysis.getSample() != null) {
-                analysis.getSample().setSampleDate(deliveryDate);
+                analysis.getSample().setDateOfShipment(deliveryDate);
             }
             analysisRepository.save(analysis);
         }

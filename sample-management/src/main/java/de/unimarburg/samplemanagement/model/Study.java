@@ -44,6 +44,7 @@ public class Study {
     private Date endDate;
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Subject> listOfSubjects = new ArrayList<>();
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -57,10 +58,21 @@ public class Study {
     )
     private Set<AnalysisType> analysisTypes = new HashSet<>();
 
+    @Column(columnDefinition = "TEXT")
+    private String methodValidation;
+
+    @Column(columnDefinition = "TEXT")
+    private String qualityControl;
+
+    @Column(columnDefinition = "TEXT")
+    private String remarks;
+
+    @Transient
     public int getNumberOfSubjects() {
         return listOfSubjects.size();
     }
 
+    @Transient
     public List<Sample> getListOfSamples() {
         return listOfSubjects.stream()
                 .map(Subject::getListOfSamples)
@@ -68,6 +80,7 @@ public class Study {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
+    @Transient
     public String getName() {
         return studyName;
     }

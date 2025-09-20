@@ -33,6 +33,7 @@ public class Subject {
 
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Sample> listOfSamples = new ArrayList<>();
 
     public Subject(Long alias, Study study) {

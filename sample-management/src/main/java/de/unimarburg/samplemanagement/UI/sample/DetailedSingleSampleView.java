@@ -41,7 +41,7 @@ public class DetailedSingleSampleView extends HorizontalLayout {
         grid.addColumn(Sample::getStudyName).setHeader("Study Name");
         grid.addColumn(Sample::getSubjectAlias).setHeader("Subject Alias");
         grid.addColumn(Sample::getSample_barcode).setHeader("Barcode");
-        grid.addColumn(Sample::getSampleDate).setHeader("Sample Date");
+        grid.addColumn(Sample::getDateOfShipment).setHeader("Sample Date");
         grid.addColumn(sample -> sample.getSampleDelivery().getRunningNumber()).setHeader("Sample Delivery Running Number");
         grid.addColumn(Sample::getSample_type).setHeader("Sample Type");
         grid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");

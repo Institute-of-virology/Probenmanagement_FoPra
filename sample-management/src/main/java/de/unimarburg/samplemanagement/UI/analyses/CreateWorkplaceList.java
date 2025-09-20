@@ -21,6 +21,7 @@ import de.unimarburg.samplemanagement.model.SampleDelivery;
 import de.unimarburg.samplemanagement.model.Study;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.ExcelTemplateFiller;
+import de.unimarburg.samplemanagement.utils.FORMAT_UTILS;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -78,7 +79,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
         deliveryFilter.setLabel("Filter by Delivery");
         deliveryFilter.setItems(study.getSampleDeliveryList());
         deliveryFilter.setEmptySelectionAllowed(true);
-        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> String.valueOf(sampleDelivery.getRunningNumber())));
+        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> FORMAT_UTILS.getOrdinal(sampleDelivery.getRunningNumber()) + " delivery"));
         deliveryFilter.addValueChangeListener(e -> {
             if (e.getValue() != null) {
                 sampleGrid.setItems(e.getValue().getSamples());
@@ -184,7 +185,11 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
             date = datePicker.getValue();
             ArrayList<Sample> sampleList = new ArrayList<>();
-            ArrayList<Sample> selectedSampleCopy = new ArrayList<>(selectedSampleBarcodes);
+            String selectedAssay = radioButtonGroup.getValue();
+            ArrayList<Sample> selectedSampleCopy = new ArrayList<>(selectedSampleBarcodes.stream()
+                    .filter(sample -> sample.getListOfAnalysis().stream()
+                            .anyMatch(analysis -> analysis.getAnalysisType().getAnalysisName().equals(selectedAssay)))
+                    .collect(Collectors.toList()));
 
             IntegerField maxPerTableField = (IntegerField) textFieldsLayout.getComponentAt(3);
             int maxPerTable = Optional.ofNullable(maxPerTableField.getValue()).orElse(1000);
@@ -268,23 +273,9 @@ public class CreateWorkplaceList extends HorizontalLayout {
                 throw new FileNotFoundException("Template file not found: " + templatePath);
             }
 
-            File outputDir = new File("output");
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
-            }
-
-            String outputPath = "output/report.xlsx";
-            ExcelTemplateFiller.fillTemplate(templateInputStream, outputPath, data, sampleList, clientStateService.getClientState().getSelectedStudy(), date);
-
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            try (FileInputStream fileInputStream = new FileInputStream(outputPath)) {
-                byte[] buffer = new byte[1024];
-                int length;
-                while ((length = fileInputStream.read(buffer)) != -1) {
-                    byteArrayOutputStream.write(buffer, 0, length);
-                }
-            }
-            return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ExcelTemplateFiller.fillTemplate(templateInputStream, baos, data, sampleList, clientStateService.getClientState().getSelectedStudy(), date);
+            return new ByteArrayInputStream(baos.toByteArray());
         }
     }
 }
