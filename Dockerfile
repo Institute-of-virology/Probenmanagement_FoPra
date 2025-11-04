@@ -1,5 +1,5 @@
 # Stage 1: Build the project using Maven
-FROM maven:3.8.5-openjdk-17 AS builder
+FROM maven:3.8.5-eclipse-temurin-17 AS builder
 # Accept proxy settings as build args
 ARG http_proxy
 ARG https_proxy
@@ -16,7 +16,7 @@ COPY sample-management /app
 RUN mvn clean package -Pproduction -DskipTests
 
 # Stage 2: Run the built JAR
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 # Accept proxy settings as build args
 ARG http_proxy
 ARG https_proxy
