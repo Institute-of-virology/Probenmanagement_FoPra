@@ -1,11 +1,13 @@
 package de.unimarburg.samplemanagement.utils;
 
+import com.vaadin.flow.component.notification.Notification;
 import de.unimarburg.samplemanagement.model.*;
 import de.unimarburg.samplemanagement.repository.*;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.io.FileInputStream;
@@ -163,7 +165,16 @@ public class ExcelParser {
         workbook.close();
         inputStream.close();
 
-        sampleDeliveryRepository.save(sampleDelivery);
+        try {
+            sampleDeliveryRepository.save(sampleDelivery);
+        } catch (DataIntegrityViolationException ex) {
+            System.err.println("Duplicate barcode detected");
+            // rethrow so the UI layer can handle it
+            throw ex;
+        } catch (Exception ex) {
+            System.err.println("Unexpected error: " + ex.getMessage());
+            throw new IOException("Failed to process file", ex);
+        }
     }
 
     private Subject getSubject(long alias, Study study) {
