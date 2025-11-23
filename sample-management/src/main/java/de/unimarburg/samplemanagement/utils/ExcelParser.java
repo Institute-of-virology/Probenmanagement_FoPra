@@ -108,6 +108,8 @@ public class ExcelParser {
             iterator.next();
         }
 
+        Set<String> barcodesInFile = new HashSet<>();
+
         while (iterator.hasNext()) {
             Row currentRow = iterator.next();
 
@@ -141,13 +143,22 @@ public class ExcelParser {
                 continue;
             }
 
+            // Check for duplicates within the file
+            if (!barcodesInFile.add(barcode)) {
+                throw new IOException("Duplicate barcode " + barcode + " found in this delivery!");
+            }
+
             // Skip if barcode already exists for this study
             String finalBarcode = barcode;
-            boolean duplicateExists = study.getListOfSamples().stream()
-                    .anyMatch(s -> finalBarcode.equals(s.getSample_barcode()));
-            if (duplicateExists) {
-                System.out.println("Skipping duplicate barcode: " + barcode + " for study: " + study.getStudyName());
-                continue;
+            Optional<Sample> duplicateSample = study.getListOfSamples().stream()
+                    .filter(s -> finalBarcode.equals(s.getSample_barcode()))
+                    .findFirst();
+
+            if (duplicateSample.isPresent()) {
+                Sample existingSample = duplicateSample.get();
+                SampleDelivery delivery = existingSample.getSampleDelivery();
+                String deliveryIdentifier = "delivery " + (delivery.getRunningNumber() + 1);
+                throw new IOException("Barcode " + barcode + " is already being used by study " + study.getStudyName() + " in " + deliveryIdentifier);
             }
 
             sample.setSample_barcode(barcode);
