@@ -103,5 +103,16 @@ public class GENERAL_UTIL {
                 .contains(new SimpleGrantedAuthority(role));
     }
 
+    public static String toOrdinalDelivery(int number) {
+        if (number < 0) {
+            return String.valueOf(number);
+        }
+        String[] words = { "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth" };
+        if (number < words.length) {
+            return words[number] + " delivery";
+        }
+        return (number + 1) + "th delivery";
+    }
+
 
 }
