@@ -108,7 +108,7 @@ public class ManualSampleEditing extends HorizontalLayout {
             if (sampleDelivery1 == null) {
                 return null;
             }
-            return GENERAL_UTIL.toOrdinalDelivery(sample.getSampleDelivery().getRunningNumber());
+            return GENERAL_UTIL.toOrdinal(sample.getSampleDelivery().getRunningNumber()) + " delivery";
         }).setHeader("Sample Delivery").setSortable(true).setResizable(true);
         Grid.Column<Sample> coordinatesColumn = sampleGrid.addColumn(Sample::getCoordinates).setHeader("Coordinates").setSortable(true).setResizable(true);
 
@@ -122,7 +122,7 @@ public class ManualSampleEditing extends HorizontalLayout {
             deleteButton.addClickListener(e -> {
                 // a confirmation dialog
                 com.vaadin.flow.component.dialog.Dialog dialog = new com.vaadin.flow.component.dialog.Dialog();
-                dialog.add(new com.vaadin.flow.component.html.Label("Are you sure you want to delete this sample?"));
+                dialog.add("Are you sure you want to delete this sample?");
                 Button confirmButton = new Button("Confirm", event -> {
                     try {
                         sampleService.deleteSample(sample.getId());
@@ -171,7 +171,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         ComboBox<SampleDelivery> sampleDeliveryComboBox = new ComboBox<>();
         sampleDeliveryComboBox.setPlaceholder("Select a delivery");
         sampleDeliveryComboBox.setItems(clientStateService.getClientState().getSelectedStudy().getSampleDeliveryList());
-        sampleDeliveryComboBox.setItemLabelGenerator(sd -> GENERAL_UTIL.toOrdinalDelivery(sd.getRunningNumber()));
+        sampleDeliveryComboBox.setItemLabelGenerator(sd -> GENERAL_UTIL.toOrdinal(sd.getRunningNumber()) + " delivery");
         binder.bind(sampleDeliveryComboBox, Sample::getSampleDelivery, Sample::setSampleDelivery);
         sampleDelivery.setEditorComponent(sampleDeliveryComboBox);
 

@@ -41,7 +41,6 @@ import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
 import de.unimarburg.samplemanagement.repository.ReportAuthorRepository;
 import de.unimarburg.samplemanagement.repository.StudyRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
-import de.unimarburg.samplemanagement.utils.FORMAT_UTILS;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.apache.commons.io.IOUtils;
@@ -171,7 +170,7 @@ public class CreateStudyReport extends HorizontalLayout {
         sampleDeliveries.sort(Comparator.comparing(SampleDelivery::getRunningNumber));
         for (SampleDelivery sampleDelivery : sampleDeliveries) {
             Checkbox checkbox = new Checkbox(true);
-            Div labelRunningNumber = new Div(FORMAT_UTILS.getOrdinal(sampleDelivery.getRunningNumber()) + " delivery");
+            Div labelRunningNumber = new Div(GENERAL_UTIL.toOrdinal(sampleDelivery.getRunningNumber()) + " delivery");
             Div labelDate = new Div(new SimpleDateFormat("dd.MM.yyyy").format(sampleDelivery.getDeliveryDate()));
             sampleDeliveriesCheckboxMap.put(sampleDelivery, checkbox.getValue());
             checkbox.addValueChangeListener(event -> {
@@ -509,7 +508,7 @@ public class CreateStudyReport extends HorizontalLayout {
                             .setMarginLeft(20);
                     for (SampleDelivery delivery : selectedDeliveries) {
                         String deliveryInfo = String.format("%s delivery: Received on %s, %d samples.",
-                                FORMAT_UTILS.getOrdinal(delivery.getRunningNumber()),
+                            GENERAL_UTIL.toOrdinal(delivery.getRunningNumber()),
                                 new SimpleDateFormat("dd.MM.yyyy").format(delivery.getDeliveryDate()),
                                 delivery.getSamples().size());
                         deliveryList.add(new ListItem(deliveryInfo));

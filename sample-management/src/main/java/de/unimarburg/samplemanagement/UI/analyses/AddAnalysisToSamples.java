@@ -9,11 +9,12 @@ import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.renderer.TextRenderer;
 import com.vaadin.flow.router.Route;
 import de.unimarburg.samplemanagement.model.*;
+import de.unimarburg.samplemanagement.repository.AnalysisRepository;
 import de.unimarburg.samplemanagement.repository.SampleRepository;
 import de.unimarburg.samplemanagement.repository.StudyRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.DISPLAY_UTILS;
-import de.unimarburg.samplemanagement.utils.FORMAT_UTILS;
+import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -25,16 +26,18 @@ import java.util.stream.Collectors;
 public class AddAnalysisToSamples extends HorizontalLayout {
     private final SampleRepository sampleRepository;
     private final StudyRepository studyRepository;
+    private final AnalysisRepository analysisRepository;
     Grid<Sample> sampleGrid = new Grid<>();
     ClientStateService clientStateService;
     Study study;
 
 
     @Autowired
-    public AddAnalysisToSamples(ClientStateService clientStateService, StudyRepository studyRepository, SampleRepository sampleRepository) {
+    public AddAnalysisToSamples(ClientStateService clientStateService, StudyRepository studyRepository, SampleRepository sampleRepository, AnalysisRepository analysisRepository) {
         this.clientStateService = clientStateService;
         this.sampleRepository = sampleRepository;
         this.studyRepository = studyRepository;
+        this.analysisRepository = analysisRepository;
         add(SIDEBAR_FACTORY.getSidebar(clientStateService.getClientState().getSelectedStudy()));
         study = clientStateService.getClientState().getSelectedStudy();
         if (clientStateService.getClientState().getSelectedStudy() == null) {
@@ -96,13 +99,22 @@ public class AddAnalysisToSamples extends HorizontalLayout {
 
                     if (exists) {
                         // Remove analysis
-                        sample.getListOfAnalysis().removeIf(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
+                        Analysis analysisToRemove = sample.getListOfAnalysis().stream()
+                                .filter(a -> a.getAnalysisType().getId().equals(analysisType.getId()))
+                                .findFirst().orElse(null);
+                        if (analysisToRemove != null) {
+                            sample.getListOfAnalysis().remove(analysisToRemove);
+                            analysisRepository.delete(analysisToRemove);
+                            setButtonAddMode(button);
+                        }
                     } else {
                         // Add analysis
-                        sample.getListOfAnalysis().add(new Analysis(analysisType, sample));
+                        Analysis newAnalysis = new Analysis(analysisType, sample);
+                        sample.getListOfAnalysis().add(newAnalysis);
+                        analysisRepository.save(newAnalysis);
+                        setButtonRemoveMode(button);
                     }
                     sampleRepository.save(sample);
-                    refreshSampleGrid();
                 });
 
                 return button;
@@ -116,7 +128,7 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         deliveryFilter.setLabel("Filter by Delivery");
         deliveryFilter.setItems(study.getSampleDeliveryList());
         deliveryFilter.setEmptySelectionAllowed(true);
-        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> FORMAT_UTILS.getOrdinal(sampleDelivery.getRunningNumber()) + " delivery"));
+        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> GENERAL_UTIL.toOrdinal(sampleDelivery.getRunningNumber()) + " delivery"));
         deliveryFilter.addValueChangeListener(e -> {
             if (e.getValue() != null) {
                 sampleGrid.setItems(e.getValue().getSamples());
@@ -132,14 +144,18 @@ public class AddAnalysisToSamples extends HorizontalLayout {
             Button button = new Button("Add all " + analysisType.getAnalysisName());
             button.addClickListener(e -> {
                 List<Sample> samplesToUpdate = new ArrayList<>();
+                List<Analysis> analysesToSave = new ArrayList<>();
                 for (Sample sample : study.getListOfSamples()) {
                     if (deliveryFilter.getValue() == null || deliveryFilter.getValue().getSamples().contains(sample)) {
                         if (sample.getListOfAnalysis().stream().noneMatch(a -> a.getAnalysisType().getId().equals(analysisType.getId()))) {
-                            sample.getListOfAnalysis().add(new Analysis(analysisType, sample));
+                            Analysis newAnalysis = new Analysis(analysisType, sample);
+                            sample.getListOfAnalysis().add(newAnalysis);
+                            analysesToSave.add(newAnalysis);
                             samplesToUpdate.add(sample);
                         }
                     }
                 }
+                analysisRepository.saveAll(analysesToSave);
                 sampleRepository.saveAll(samplesToUpdate);
                 refreshSampleGrid();
             });
@@ -153,12 +169,17 @@ public class AddAnalysisToSamples extends HorizontalLayout {
             Button button = new Button("Remove all " + analysisType.getAnalysisName());
             button.getStyle().set("background-color", "red");
             button.addClickListener(e -> {
+                List<Analysis> analysesToDelete = new ArrayList<>();
                 for (Sample sample : study.getListOfSamples()) {
                     if (deliveryFilter.getValue() == null || deliveryFilter.getValue().getSamples().contains(sample)) {
+                        sample.getListOfAnalysis().stream()
+                                .filter(a -> a.getAnalysisType().getId().equals(analysisType.getId()))
+                                .forEach(analysesToDelete::add);
                         sample.getListOfAnalysis().removeIf(a -> a.getAnalysisType().getId().equals(analysisType.getId()));
                         sampleRepository.save(sample);
                     }
                 }
+                analysisRepository.deleteAll(analysesToDelete);
                 refreshSampleGrid();
             });
             remove_all_buttons.add(button);

@@ -18,7 +18,7 @@ import de.unimarburg.samplemanagement.model.SampleDelivery;
 import de.unimarburg.samplemanagement.model.Study;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.service.SampleService;
-import de.unimarburg.samplemanagement.utils.FORMAT_UTILS;
+import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -79,7 +79,7 @@ public class VerifySampleDelivery extends HorizontalLayout {
         deliveryFilter.setLabel("Select Delivery to verify");
         deliveryFilter.setItems(study.getSampleDeliveryList());
         deliveryFilter.setEmptySelectionAllowed(true);
-        deliveryFilter.setRenderer(new TextRenderer<>(sd -> FORMAT_UTILS.getOrdinal(sd.getRunningNumber()) + " delivery"));
+        deliveryFilter.setRenderer(new TextRenderer<>(sd -> GENERAL_UTIL.toOrdinal(sd.getRunningNumber()) + " delivery"));
         deliveryFilter.setValue(sampleDelivery);
         deliveryFilter.addValueChangeListener(e -> {
             sampleDelivery = e.getValue();

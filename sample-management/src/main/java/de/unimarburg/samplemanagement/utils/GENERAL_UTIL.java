@@ -103,15 +103,23 @@ public class GENERAL_UTIL {
                 .contains(new SimpleGrantedAuthority(role));
     }
 
-    public static String toOrdinalDelivery(int number) {
+    public static String toOrdinal(int number) {
         if (number < 0) {
             return String.valueOf(number);
         }
         String[] words = { "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth" };
         if (number < words.length) {
-            return words[number] + " delivery";
+            return words[number];
         }
-        return (number + 1) + "th delivery";
+        String[] suffixes = new String[] { "th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th" };
+        switch ((number + 1) % 100) {
+            case 11:
+            case 12:
+            case 13:
+                return (number + 1) + "th";
+            default:
+                return (number + 1) + suffixes[(number + 1) % 10];
+        }
     }
 
 

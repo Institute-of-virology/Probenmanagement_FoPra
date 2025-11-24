@@ -24,10 +24,6 @@ public class SampleService {
         return sampleRepository.findAll();
     }
 
-    public void save(Sample sample) {
-        sampleRepository.save(sample);
-    }
-
     @Transactional
     public void deleteSample(Long sampleId) {
         Sample sample = sampleRepository.findById(sampleId)
@@ -49,5 +45,10 @@ public class SampleService {
         }
 
         sampleRepository.delete(sample);
+    }
+
+    @Transactional
+    public void save(Sample sample) {
+        sampleRepository.save(sample);
     }
 }
