@@ -11,6 +11,7 @@ import com.vaadin.flow.router.Route;
 import de.unimarburg.samplemanagement.model.Analysis;
 import de.unimarburg.samplemanagement.model.AnalysisType;
 import de.unimarburg.samplemanagement.model.Study;
+import de.unimarburg.samplemanagement.repository.AnalysisRepository;
 import de.unimarburg.samplemanagement.repository.SampleRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.DISPLAY_UTILS;
@@ -22,15 +23,17 @@ import java.util.List;
 @Route("/EnterSampleAnalysis")
 public class InputAnalysisResult extends HorizontalLayout {
     private final SampleRepository sampleRepository;
+    private final AnalysisRepository analysisRepository;
     private ClientStateService clientStateService;
     private Study study;
     private AnalysisType selectedAnalysisType = null;
 
 
     @Autowired
-    public InputAnalysisResult(ClientStateService clientStateService, SampleRepository sampleRepository) {
+    public InputAnalysisResult(ClientStateService clientStateService, SampleRepository sampleRepository, AnalysisRepository analysisRepository) {
         this.clientStateService = clientStateService;
         this.sampleRepository = sampleRepository;
+        this.analysisRepository = analysisRepository;
         add(SIDEBAR_FACTORY.getSidebar(clientStateService.getClientState().getSelectedStudy()));
         study = clientStateService.getClientState().getSelectedStudy();
         if (clientStateService.getClientState().getSelectedStudy() == null) {
@@ -98,6 +101,7 @@ public class InputAnalysisResult extends HorizontalLayout {
 
     private void saveNewAnalysisResult(Analysis analysis, String value) {
         analysis.setAnalysisResult(value);
+        analysisRepository.save(analysis);
         sampleRepository.save(analysis.getSample());
         Notification.show("Result Saved");
     }
