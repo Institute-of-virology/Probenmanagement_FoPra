@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Route("/ManualSampleEditing")
 public class ManualSampleEditing extends HorizontalLayout {
@@ -154,32 +155,6 @@ public class ManualSampleEditing extends HorizontalLayout {
                 });
         sampleDelivery.setEditorComponent(sampleDeliveryField);
 
-        NumberField subjectIdField = new NumberField();
-        subjectIdField.setMin(0);
-        subjectIdField.setStep(1);
-        binder.forField(subjectIdField)
-                .withConverter(new DoubleToLongConverter())
-                .bind(sample -> {
-                    if (sample.getSubject() == null) {
-                        return null;
-                    }
-                    return sample.getSubject().getAlias();
-                }, (sample, alias) -> {
-                    if (alias == null ){
-                        Notification.show("please specify corresponding subject alias");
-                        return;
-                    }
-                    Subject subject;
-                    Optional<Subject> subjectOpt = subjectRepository.getSubjectByAliasAndStudy(alias, clientStateService.getClientState().getSelectedStudy());
-                    if (subjectOpt.isPresent()){
-                        subject = subjectOpt.get();
-                    } else {
-                        subject = new Subject(alias,clientStateService.getClientState().getSelectedStudy());
-                        subject = subjectRepository.save(subject);
-                    }
-                    sample.setSubject(subject);
-                });
-
         TextField coordinatesField = new TextField();
         binder.bind(coordinatesField, Sample::getCoordinates, Sample::setCoordinates);
         coordinatesColumn.setEditorComponent(coordinatesField);
@@ -189,6 +164,7 @@ public class ManualSampleEditing extends HorizontalLayout {
             Sample editedSample = new Sample();
             if (!binder.writeBeanIfValid(editedSample)){
                 Notification.show("Please make a valid sample");
+                return;
             }
             if (!isSampleValid(editedSample)){
                 Notification.show("Please make a valid sample");
@@ -220,6 +196,36 @@ public class ManualSampleEditing extends HorizontalLayout {
         // Add save listener
         editor.addSaveListener(event -> {
             Sample editedSample = event.getItem();
+            if (editedSample == null) {
+                return;
+            }
+            if (editedSample.getSubject() == null) {
+                SampleDelivery delivery = editedSample.getSampleDelivery();
+                if (delivery != null) {
+                    Optional<Subject> subjectOpt = delivery.getSamples().stream()
+                            .filter(s -> s.getSubject() != null)
+                            .map(Sample::getSubject)
+                            .findFirst();
+
+                    if (subjectOpt.isPresent()) {
+                        editedSample.setSubject(subjectOpt.get());
+                    } else {
+                        // No other sample in the delivery has a subject, so create a new one.
+                        long alias;
+                        do {
+                            alias = (long) (10000 + new Random().nextInt(90000));
+                        } while (subjectRepository.getSubjectByAliasAndStudy(alias, editedSample.getStudy()).isPresent());
+
+                        Subject newSubject = new Subject(alias, editedSample.getStudy());
+                        newSubject = subjectRepository.save(newSubject);
+                        editedSample.setSubject(newSubject);
+                    }
+                } else {
+                    Notification.show("Please select a sample delivery");
+                    editor.editItem(editedSample);
+                    return;
+                }
+            }
             try {
                 sampleRepository.save(editedSample);
             } catch (Exception e){
