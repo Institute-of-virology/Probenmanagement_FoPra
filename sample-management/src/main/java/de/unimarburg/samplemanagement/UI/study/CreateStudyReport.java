@@ -25,6 +25,8 @@ import com.itextpdf.layout.property.UnitValue;
 import com.vaadin.flow.component.accordion.Accordion;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
@@ -230,11 +232,42 @@ public class CreateStudyReport extends HorizontalLayout {
 
         // Content for Generate Report Tab
         VerticalLayout generateReportLayout = new VerticalLayout();
+        Button openDialogButton = new Button("Open Report Generation Dialog");
+        generateReportLayout.add(openDialogButton);
+
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Generate Report");
+
+        VerticalLayout dialogLayout = new VerticalLayout();
+        List<String> senders = new ArrayList<>();
+        if (study.getSender1() != null && !study.getSender1().isEmpty()) {
+            senders.add(study.getSender1());
+        }
+        if (study.getSender2() != null && !study.getSender2().isEmpty()) {
+            senders.add(study.getSender2());
+        }
+        if (study.getSender3() != null && !study.getSender3().isEmpty()) {
+            senders.add(study.getSender3());
+        }
+
+        ComboBox<String> senderComboBox = new ComboBox<>("Select Sender");
+        senderComboBox.setItems(senders);
+
         printPdfButton = new Button("Create Report");
+        printPdfButton.setEnabled(false);
+
+        senderComboBox.addValueChangeListener(event -> printPdfButton.setEnabled(event.getValue() != null));
+
         printPdfButton.addClickListener(event -> {
             try {
+                String selectedSender = senderComboBox.getValue();
+                if (selectedSender == null) {
+                    Notification.show("Please select a sender.");
+                    return;
+                }
+
                 String dest = "/tmp/study_report.pdf";
-                generatePdf(dest);
+                generatePdf(dest, selectedSender);
 
                 Path path = Paths.get(dest);
                 if (!Files.exists(path)) {
@@ -252,20 +285,26 @@ public class CreateStudyReport extends HorizontalLayout {
                 });
 
                 if (downloadLink == null) {
-                    downloadLink = new Anchor(resource, "");
-                    downloadLink.getElement().setAttribute("download", "study_report.pdf");
-                    Button downloadButton = new Button("Download PDF");
-                    downloadLink.add(downloadButton);
+                    downloadLink = new Anchor(resource, "Download PDF");
+                    downloadLink.getElement().setAttribute("download", true);
                     generateReportLayout.add(downloadLink);
                 } else {
                     downloadLink.setHref(resource);
                 }
+                dialog.close();
             } catch (Exception e) {
                 Notification.show("Error generating PDF: " + e.getMessage());
                 e.printStackTrace();
             }
         });
-        generateReportLayout.add(printPdfButton);
+
+        dialogLayout.add(senderComboBox, printPdfButton);
+        dialog.add(dialogLayout);
+
+        Button cancelButton = new Button("Cancel", e -> dialog.close());
+        dialog.getFooter().add(cancelButton);
+
+        openDialogButton.addClickListener(event -> dialog.open());
         generateReportPage.add(generateReportLayout);
 
         tabs.addSelectedChangeListener(event -> {
@@ -377,7 +416,7 @@ public class CreateStudyReport extends HorizontalLayout {
         }
     }
 
-    private void generatePdf(String dest) throws IOException, URISyntaxException {
+    private void generatePdf(String dest, String selectedSender) throws IOException, URISyntaxException {
         PdfWriter writer = new PdfWriter(dest);
         PdfDocument pdfDoc = new PdfDocument(writer);
         pdfDoc.setDefaultPageSize(PageSize.A4);
@@ -438,7 +477,7 @@ public class CreateStudyReport extends HorizontalLayout {
 
                 document.add(new LineSeparator(new SolidLine()));
 
-                Paragraph recipient = new Paragraph("Recipient Address:\n" + study.getSponsor())
+                Paragraph recipient = new Paragraph("Recipient Address:\n" + selectedSender)
                         .setFont(calibriFont)
                         .setFontSize(10)
                         .setMargins(10, 0, 5, 0); // add top margin
