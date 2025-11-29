@@ -146,7 +146,7 @@ public class CreateStudyReport extends HorizontalLayout {
                 Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
                 String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
                 return display;
-            }).setHeader(analysisType.getAnalysisName());
+            }).setHeader(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + ")");
         }
 
         Accordion accordion = new Accordion();
@@ -504,7 +504,7 @@ public class CreateStudyReport extends HorizontalLayout {
                         .filter(analysisCheckboxMap::get)
                         .toList();
                 for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    methods.append(analysisType.getAnalysisName()).append(", ");
+                    methods.append(analysisType.getAnalysisName()).append(" (").append(analysisType.getAnalysisUnit()).append("), ");
                 }
                 if (methods.length() > 0) {
                     methods.setLength(methods.length() - 2);
@@ -585,7 +585,7 @@ public class CreateStudyReport extends HorizontalLayout {
                 table.addHeaderCell(new Cell().add(new Paragraph("No.")).setFont(calibriFont).setFontSize(10));
                 table.addHeaderCell(new Cell().add(new Paragraph("Sample ID")).setFont(calibriFont).setFontSize(10));
                 for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    table.addHeaderCell(new Cell().add(new Paragraph(analysisType.getAnalysisName())).setFont(calibriFont).setFontSize(10));
+                    table.addHeaderCell(new Cell().add(new Paragraph(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + ")")).setFont(calibriFont).setFontSize(10));
                 }
 
                 List<Sample> samples = study.getListOfSamples();
@@ -604,7 +604,7 @@ public class CreateStudyReport extends HorizontalLayout {
                 document.add(table);
 
                 for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    Paragraph textbaustein = new Paragraph(analysisType.getAnalysisName() + ": " + analysisType.getAnalysisDescription())
+                    Paragraph textbaustein = new Paragraph(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + "): " + analysisType.getAnalysisDescription())
                             .setFont(calibriFont)
                             .setBold()
                             .setFontSize(10)
