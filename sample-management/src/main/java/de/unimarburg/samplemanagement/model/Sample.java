@@ -55,7 +55,7 @@ public class Sample {
     @Temporal(TemporalType.TIMESTAMP)
     private Date validatedAt;
 
-    @OneToMany(mappedBy = "sample", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "sample", fetch = FetchType.EAGER)
     private List<Analysis> listOfAnalysis;
 
     @Transient
