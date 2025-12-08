@@ -30,7 +30,7 @@ public class SampleDelivery {
     @Transient
     public int getRunningNumber() {
         List<SampleDelivery> sampleDeliveries = study.getSampleDeliveryList();
-        return sampleDeliveries.indexOf(this);
+        return sampleDeliveries.indexOf(this) + 1;
     }
 
     public void addSample(Sample sample) {

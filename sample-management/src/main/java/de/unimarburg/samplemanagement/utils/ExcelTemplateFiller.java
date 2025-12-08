@@ -87,7 +87,14 @@ public class ExcelTemplateFiller {
                     cell6.setCellStyle(sourceCellStyle6);
 
                     cell0.setCellValue(count);
-                    cell2.setCellValue(Optional.ofNullable(sample.getCoordinates()).orElse(""));
+
+                    String coordinates = Optional.ofNullable(sample.getCoordinates()).orElse("");
+                    String deliveryInfo = "";
+                    if (sample.getSampleDelivery() != null) {
+                        deliveryInfo = " (Box " + sample.getSampleDelivery().getRunningNumber() + ")";
+                    }
+                    cell2.setCellValue(coordinates + deliveryInfo);
+
                     cell3.setCellValue(Optional.ofNullable(sample.getSample_barcode()).orElse(""));
                     cell4.setCellValue(Optional.ofNullable(sample.getSample_amount()).orElse(""));
                     cell5.setCellValue(Optional.ofNullable(sample.getSample_type()).orElse(""));
@@ -97,7 +104,14 @@ public class ExcelTemplateFiller {
 
                 else {
                     sheet.getRow(row).getCell(0).setCellValue(count);
-                    sheet.getRow(row).getCell(2).setCellValue(Optional.ofNullable(sample.getCoordinates()).orElse(""));
+
+                    String coordinates = Optional.ofNullable(sample.getCoordinates()).orElse("");
+                    String deliveryInfo = "";
+                    if (sample.getSampleDelivery() != null) {
+                        deliveryInfo = " (Box " + sample.getSampleDelivery().getRunningNumber() + ")";
+                    }
+                    sheet.getRow(row).getCell(2).setCellValue(coordinates + deliveryInfo);
+
                     sheet.getRow(row).getCell(3).setCellValue(Optional.ofNullable(sample.getSample_barcode()).orElse(""));
                     sheet.getRow(row).getCell(4).setCellValue(Optional.ofNullable(sample.getSample_amount()).orElse(""));
                     sheet.getRow(row).getCell(5).setCellValue(Optional.ofNullable(sample.getSample_type()).orElse(""));
