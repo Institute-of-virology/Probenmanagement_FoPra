@@ -1,27 +1,5 @@
 package de.unimarburg.samplemanagement.UI.study;
 
-import com.itextpdf.io.font.PdfEncodings;
-import com.itextpdf.io.image.ImageData;
-import com.itextpdf.io.image.ImageDataFactory;
-import com.itextpdf.kernel.events.Event;
-import com.itextpdf.kernel.events.IEventHandler;
-import com.itextpdf.kernel.events.PdfDocumentEvent;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.geom.Rectangle;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfPage;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
-import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
-import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
-import com.itextpdf.layout.Canvas;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.*;
-import com.itextpdf.layout.property.HorizontalAlignment;
-import com.itextpdf.layout.property.TextAlignment;
-import com.itextpdf.layout.property.UnitValue;
 import com.vaadin.flow.component.accordion.Accordion;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
@@ -39,54 +17,38 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import de.unimarburg.samplemanagement.model.*;
-import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
-import de.unimarburg.samplemanagement.repository.ReportAuthorRepository;
 import de.unimarburg.samplemanagement.repository.StudyRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
+import de.unimarburg.samplemanagement.service.PdfReportService;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
-import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 
 @Route("/CreateReport")
 public class CreateStudyReport extends HorizontalLayout {
 
-    private final AddressStoreRepository addressStoreRepository;
-    private final ReportAuthorRepository reportAuthorRepository;
     private final StudyRepository studyRepository;
+    private final PdfReportService pdfReportService;
     private Study study;
     private Map<AnalysisType, Boolean> analysisCheckboxMap = new HashMap<>();
     private Map<SampleDelivery, Boolean> sampleDeliveriesCheckboxMap = new HashMap<>();
     Grid<Sample> sampleGrid;
-    private ClientStateService clientStateService;
-    private List<ReportAuthor> reportAuthors = new ArrayList<>();
     private Button printPdfButton;
 
     private Anchor downloadLink;
 
     @Autowired
-    public CreateStudyReport(ClientStateService clientStateService, AddressStoreRepository addressStoreRepository, ReportAuthorRepository reportAuthorRepository, StudyRepository studyRepository) {
-        this.clientStateService = clientStateService;
-        this.reportAuthorRepository = reportAuthorRepository;
-        this.addressStoreRepository = addressStoreRepository;
+    public CreateStudyReport(ClientStateService clientStateService, StudyRepository studyRepository, PdfReportService pdfReportService) {
         this.studyRepository = studyRepository;
+        this.pdfReportService = pdfReportService;
         setSizeFull();
         add(SIDEBAR_FACTORY.getSidebar(clientStateService.getClientState().getSelectedStudy()));
-        if (clientStateService == null || clientStateService.getClientState().getSelectedStudy() == null) {
+        if (clientStateService.getClientState().getSelectedStudy() == null) {
             add("Please select a Study");
             return;
         }
@@ -266,23 +228,16 @@ public class CreateStudyReport extends HorizontalLayout {
                     return;
                 }
 
-                String dest = "/tmp/study_report.pdf";
-                generatePdf(dest, selectedSender);
+                List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
+                        .filter(analysisCheckboxMap::get)
+                        .toList();
+                List<SampleDelivery> selectedDeliveries = sampleDeliveriesCheckboxMap.keySet().stream()
+                        .filter(sampleDeliveriesCheckboxMap::get)
+                        .toList();
 
-                Path path = Paths.get(dest);
-                if (!Files.exists(path)) {
-                    Notification.show("PDF file was not created. Please try again.");
-                    return;
-                }
+                ByteArrayInputStream pdfStream = pdfReportService.generatePdf(study, selectedSender, selectedAnalysisTypes, selectedDeliveries);
 
-                StreamResource resource = new StreamResource("study_report.pdf", () -> {
-                    try {
-                        return new ByteArrayInputStream(Files.readAllBytes(path));
-                    } catch (IOException e) {
-                        Notification.show("Error reading PDF: " + e.getMessage());
-                        return null;
-                    }
-                });
+                StreamResource resource = new StreamResource("/tmp/study_report.pdf", () -> pdfStream);
 
                 if (downloadLink == null) {
                     downloadLink = new Anchor(resource, "Download PDF");
@@ -358,303 +313,4 @@ public class CreateStudyReport extends HorizontalLayout {
         }
         sampleGrid.setItems(samplesToFilter);
     }
-
-    public class HeaderFooterHandler implements IEventHandler {
-        private final Image logo;
-        private final PdfFormXObject placeholder;
-        private final PdfFont font;
-        private final int fontSize = 10;
-
-        public HeaderFooterHandler(PdfDocument pdfDoc, Image logo, PdfFont font) {
-            this.logo = logo;
-            this.font = font;
-            // Reserve space for total page number placeholder
-            this.placeholder = new PdfFormXObject(new Rectangle(0, 0, 20, 10));
-        }
-
-        @Override
-        public void handleEvent(Event event) {
-            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
-            PdfDocument pdfDoc = docEvent.getDocument();
-            PdfPage page = docEvent.getPage();
-            int pageNumber = pdfDoc.getPageNumber(page);
-            Rectangle pageSize = page.getPageSize();
-
-            Canvas canvas = new Canvas(new PdfCanvas(page, true), pdfDoc, pageSize);
-
-            // --- Add logo at top center ---
-            logo.setFixedPosition(
-                    (pageSize.getWidth() - logo.getImageScaledWidth()) / 2,
-                    pageSize.getTop() - logo.getImageScaledHeight() - 10
-            );
-            canvas.add(logo);
-
-            // --- Page numbering: "Page X of Y" ---
-            Paragraph p = new Paragraph()
-                    .setFont(font)
-                    .setFontSize(fontSize)
-                    .add("Page " + pageNumber + " of ")
-                    .add(new Image(placeholder)); // Placeholder for total pages
-
-            canvas.showTextAligned(p,
-                    pageSize.getRight() - 60,  // right margin
-                    pageSize.getTop() - 20,   // from top
-                    TextAlignment.RIGHT);
-
-            canvas.close();
-        }
-
-        // Call this after closing the document to fill in total pages
-        public void writeTotal(PdfDocument pdfDoc) {
-            Canvas canvas = new Canvas(placeholder, pdfDoc);
-            canvas.showTextAligned(
-                    new Paragraph(String.valueOf(pdfDoc.getNumberOfPages()))
-                            .setFont(font)
-                            .setFontSize(fontSize),
-                    0, -3, TextAlignment.LEFT);
-            canvas.close();
-        }
-    }
-
-    private void generatePdf(String dest, String selectedSender) throws IOException, URISyntaxException {
-        PdfWriter writer = new PdfWriter(dest);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        pdfDoc.setDefaultPageSize(PageSize.A4);
-        Document document = new Document(pdfDoc);
-        document.setMargins(75, 20, 36, 20);
-
-        try (InputStream fontStream = getClass().getClassLoader().getResourceAsStream("calibri.ttf")) {
-            if (fontStream == null) {
-                throw new FileNotFoundException("calibri.ttf resource not found");
-            }
-            byte[] fontBytes = IOUtils.toByteArray(fontStream);
-            PdfFont calibriFont = PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H, true);
-            PdfFont calibriBoldFont = calibriFont;
-
-            try (InputStream logoStream = getClass().getClassLoader().getResourceAsStream("uni-logo.png")) {
-                if (logoStream == null) {
-                    throw new FileNotFoundException("uni-logo.png resource not found");
-                }
-                byte[] logoBytes = IOUtils.toByteArray(logoStream);
-                ImageData logoImageData = ImageDataFactory.create(logoBytes);
-                Image logoImage = new Image(logoImageData)
-                        .scaleToFit(150, 150)
-                        .setHorizontalAlignment(HorizontalAlignment.CENTER);
-
-                HeaderFooterHandler handler = new HeaderFooterHandler(pdfDoc, logoImage, calibriFont);
-                pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, handler);
-
-                document.setFont(calibriFont);
-                document.setFontSize(10);
-
-                Paragraph header = new Paragraph("Philipps-Universität Marburg -- Institut für Virologie -- Immunmonitoringlabor")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(10)
-                        .setBold()
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setMargins(0, 0, 5, 0); // add some bottom margin
-                document.add(header);
-
-                document.add(new LineSeparator(new SolidLine()));
-
-                float[] columnWidths = {3, 3, 4};
-                Table senderTable = new Table(columnWidths);
-                senderTable.setWidth(UnitValue.createPercentValue(100));
-                this.reportAuthors = reportAuthorRepository.findAll();
-                for (int i = 0; i < reportAuthors.size(); i++) {
-                    ReportAuthor reportAuthor = reportAuthors.get(i);
-                    String authorInfo = reportAuthor.getName() + ", " + reportAuthor.getTitle();
-                    senderTable.addCell(new Cell(1, 2).add(new Paragraph(authorInfo).setFont(calibriBoldFont).setFontSize(10)).setBold().setBorder(null));
-
-                    if (i == 0) {
-                        senderTable.addCell(new Cell(reportAuthors.size(), 1).add(new Paragraph(addressStoreRepository.getOwnAddress())
-                                        .setFont(calibriFont)
-                                        .setFontSize(10))
-                                .setBorder(null));
-                    }
-                }
-                document.add(senderTable);
-
-                document.add(new LineSeparator(new SolidLine()));
-
-                Paragraph recipient = new Paragraph("Recipient Address:\n" + selectedSender)
-                        .setFont(calibriFont)
-                        .setFontSize(10)
-                        .setMargins(10, 0, 5, 0); // add top margin
-                document.add(recipient);
-
-                LocalDateTime now = LocalDateTime.now();
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-                Paragraph dateOfReport = new Paragraph("Date of Report Generation: " + now.format(formatter))
-                        .setFont(calibriFont)
-                        .setFontSize(10)
-                        .setBold()
-                        .setMargins(10, 0, 5, 0); // add top margin
-                document.add(dateOfReport);
-
-                Paragraph reportTitle = new Paragraph("Report on the results of the serological analysis")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(10)
-                        .setBold()
-                        .setMargins(10, 0, 5, 0); // add top margin
-                document.add(reportTitle);
-
-                StringBuilder methods = new StringBuilder("Analytical methods: ");
-                List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
-                        .filter(analysisCheckboxMap::get)
-                        .toList();
-                for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    methods.append(analysisType.getAnalysisName()).append(" (").append(analysisType.getAnalysisUnit()).append("), ");
-                }
-                if (methods.length() > 0) {
-                    methods.setLength(methods.length() - 2);
-                }
-                Paragraph analyticalMethods = new Paragraph(methods.toString())
-                        .setFont(calibriFont)
-                        .setFontSize(10)
-                        .setMargins(10, 0, 5, 0); // add top margin
-                document.add(analyticalMethods);
-
-                Paragraph studyDetails = new Paragraph()
-                        .add("Study: ")
-                        .add(new Text(study.getStudyName()).setBold())
-                        .add(", " + study.getStartDate().toString() + "-" + study.getEndDate().toString())
-                        .setFont(calibriFont)
-                        .setFontSize(10)
-                        .setMargins(10, 0, 5, 0); // add top margin
-                document.add(studyDetails);
-
-                Paragraph deliveriesTitle = new Paragraph("Sample Deliveries:")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(10)
-                        .setBold()
-                        .setMargins(10, 0, 5, 0); // add top margin
-                document.add(deliveriesTitle);
-
-                List<SampleDelivery> selectedDeliveries = sampleDeliveriesCheckboxMap.keySet().stream()
-                        .filter(sampleDeliveriesCheckboxMap::get)
-                        .sorted(Comparator.comparing(SampleDelivery::getRunningNumber))
-                        .toList();
-
-                if (selectedDeliveries.isEmpty()) {
-                    document.add(new Paragraph("No specific deliveries selected for this report.").setFont(calibriFont).setFontSize(10).setMargins(0,0,5,0));
-                } else {
-                    com.itextpdf.layout.element.List deliveryList = new com.itextpdf.layout.element.List()
-                            .setSymbolIndent(12)
-                            .setListSymbol("\u2022")
-                            .setFont(calibriFont)
-                            .setFontSize(10)
-                            .setMarginLeft(20);
-                    for (SampleDelivery delivery : selectedDeliveries) {
-                        String deliveryInfo = String.format("%s delivery: Received on %s, %d samples.",
-                            GENERAL_UTIL.toOrdinal(delivery.getRunningNumber()),
-                                new SimpleDateFormat("dd.MM.yyyy").format(delivery.getDeliveryDate()),
-                                delivery.getSamples().size());
-                        deliveryList.add(new ListItem(deliveryInfo));
-                    }
-                    document.add(deliveryList);
-                }
-
-                if (study.getMethodValidation() != null && !study.getMethodValidation().isEmpty()) {
-                    document.add(new Paragraph("Method validation:").setBold().setMargins(10, 0, 0, 0));
-                    document.add(new Paragraph(study.getMethodValidation()).setMargins(0, 0, 5, 0));
-                }
-                if (study.getQualityControl() != null && !study.getQualityControl().isEmpty()) {
-                    document.add(new Paragraph("Quality control:").setBold().setMargins(10, 0, 0, 0));
-                    document.add(new Paragraph(study.getQualityControl()).setMargins(0, 0, 5, 0));
-                }
-                if (study.getRemarks() != null && !study.getRemarks().isEmpty()) {
-                    document.add(new Paragraph("Remarks:").setBold().setMargins(10, 0, 0, 0));
-                    document.add(new Paragraph(study.getRemarks()).setMargins(0, 0, 5, 0));
-                }
-
-                document.add(new Paragraph("The results can be found on the following page(s).").setBold().setMargins(10, 0, 0, 0));
-                document.add(new Paragraph("The test report may not be reproduced without the written consent of the laboratory.").setBold().setMargins(5, 0, 10, 0));
-
-                document.add(new AreaBreak());
-
-                float[] tableColumnWidths = new float[selectedAnalysisTypes.size() + 2];
-                tableColumnWidths[0] = 1;
-                tableColumnWidths[1] = 2;
-                for (int i = 2; i < tableColumnWidths.length; i++) {
-                    tableColumnWidths[i] = 1;
-                }
-                Table table = new Table(tableColumnWidths);
-                table.setWidth(UnitValue.createPercentValue(100));
-
-                table.addHeaderCell(new Cell().add(new Paragraph("No.")).setFont(calibriFont).setFontSize(10));
-                table.addHeaderCell(new Cell().add(new Paragraph("Sample ID")).setFont(calibriFont).setFontSize(10));
-                for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    table.addHeaderCell(new Cell().add(new Paragraph(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + ")")).setFont(calibriFont).setFontSize(10));
-                }
-
-                List<Sample> samples = study.getListOfSamples();
-                for (int i = 0; i < samples.size(); i++) {
-                    Sample sample = samples.get(i);
-                    table.addCell(new Cell().add(new Paragraph(String.valueOf(i + 1))).setFont(calibriFont).setFontSize(10));
-                    table.addCell(new Cell().add(new Paragraph(sample.getSample_barcode())).setFont(calibriFont).setFontSize(10));
-                    for (AnalysisType analysisType : selectedAnalysisTypes) {
-                        Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
-                        String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
-                        table.addCell(new Cell().add(new Paragraph(display)));
-                    }
-                }
-
-                document.add(new Paragraph("Results: ").setBold().setMargins(0, 0, 5, 0));
-                document.add(table);
-
-                for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    Paragraph textbaustein = new Paragraph(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + "): " + analysisType.getAnalysisDescription())
-                            .setFont(calibriFont)
-                            .setBold()
-                            .setFontSize(10)
-                            .setMargins(10, 0, 10, 0);
-                    document.add(textbaustein);
-                }
-
-                document.add(new Paragraph("\n\n"));
-
-                float[] validationColumnWidths = {1, 1};
-                Table validationTable = new Table(validationColumnWidths);
-                validationTable.setWidth(UnitValue.createPercentValue(100));
-                validationTable.setBorder(null);
-
-                validationTable.addCell(new Cell().add(new Paragraph("Technical validation" + "\n\n\n")
-                                .setFont(calibriBoldFont)
-                                .setFontSize(10)
-                                .setBold())
-                        .setMargins(10, 0, 0, 0)
-                        .setBorder(null)
-                        .setTextAlignment(TextAlignment.LEFT));
-
-                validationTable.addCell(new Cell().add(new Paragraph("Final validation" + "\n\n\n")
-                                .setFont(calibriBoldFont)
-                                .setFontSize(10)
-                                .setBold())
-                        .setBorder(null)
-                        .setTextAlignment(TextAlignment.RIGHT));
-
-                validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
-                                .setFont(calibriFont)
-                                .setFontSize(10))
-                        .setBorder(null)
-                        .setTextAlignment(TextAlignment.LEFT));
-
-                validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
-                                .setFont(calibriFont)
-                                .setFontSize(10))
-                        .setBorder(null)
-                        .setTextAlignment(TextAlignment.RIGHT));
-
-                document.add(validationTable);
-
-                handler.writeTotal(pdfDoc);
-
-                document.close();
-                pdfDoc.close();
-            }
-        }
-    }
 }
-
-
