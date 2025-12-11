@@ -56,7 +56,11 @@ public class InputAnalysisResult extends HorizontalLayout {
 
         List<Button> analysisSelectionButtons = uniqueAnalysisTypes.stream()
                 .map(analysisType -> {
-                    Button button = new Button(analysisType.getAnalysisName());
+                    String buttonText = analysisType.getAnalysisName();
+                    if (analysisType.getAnalysisUnit() != null && !analysisType.getAnalysisUnit().isEmpty()) {
+                        buttonText += " (" + analysisType.getAnalysisUnit() + ")";
+                    }
+                    Button button = new Button(buttonText);
                     button.addClickListener(e -> {
                         selectedAnalysisType = analysisType;
                         body.removeAll();
@@ -81,6 +85,10 @@ public class InputAnalysisResult extends HorizontalLayout {
 
         analysisGrid.addColumn(analysis -> analysis.getSample().getSample_barcode()).setHeader("Sample Barcode");
         //editable result column
+        String header = selectedAnalysisType.getAnalysisName();
+        if (selectedAnalysisType.getAnalysisUnit() != null && !selectedAnalysisType.getAnalysisUnit().isEmpty()) {
+            header += " (" + selectedAnalysisType.getAnalysisUnit() + ")";
+        }
         analysisGrid.addComponentColumn(analysis -> {
             TextField textField = new TextField();
             String analysisResult = analysis.getAnalysisResult();
@@ -92,7 +100,7 @@ public class InputAnalysisResult extends HorizontalLayout {
                 saveNewAnalysisResult(analysis, e.getValue());
             });
             return textField;
-        }).setHeader(selectedAnalysisType.getAnalysisName());
+        }).setHeader(header);
 
 
         return analysisGrid;
