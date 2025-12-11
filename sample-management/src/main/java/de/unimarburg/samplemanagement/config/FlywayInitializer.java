@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import javax.sql.DataSource;
 @Configuration
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@Profile("!prod")
 @ConditionalOnProperty(name = "app.flyway.enabled", havingValue = "true", matchIfMissing = true)
 public class FlywayInitializer implements CommandLineRunner {
 
