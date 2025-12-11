@@ -10,7 +10,6 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -42,13 +41,14 @@ public class ExcelTemplateFiller {
 
 
             //Copying Styles
-            CellStyle sourceCellStyle0 = sheet.getRow(11).getCell(0).getCellStyle();
-            CellStyle sourceCellStyle1 = sheet.getRow(11).getCell(1).getCellStyle();
-            CellStyle sourceCellStyle2 = sheet.getRow(11).getCell(2).getCellStyle();
-            CellStyle sourceCellStyle3 = sheet.getRow(11).getCell(3).getCellStyle();
-            CellStyle sourceCellStyle4 = sheet.getRow(11).getCell(4).getCellStyle();
-            CellStyle sourceCellStyle5 = sheet.getRow(11).getCell(5).getCellStyle();
-            CellStyle sourceCellStyle6 = sheet.getRow(11).getCell(6).getCellStyle();
+            Row sourceRowStyle = sheet.getRow(11);
+            CellStyle sourceCellStyle0 = sourceRowStyle.getCell(0).getCellStyle();
+            CellStyle sourceCellStyle1 = sourceRowStyle.getCell(1).getCellStyle();
+            CellStyle sourceCellStyle2 = sourceRowStyle.getCell(2).getCellStyle();
+            CellStyle sourceCellStyle3 = sourceRowStyle.getCell(3).getCellStyle();
+            CellStyle sourceCellStyle4 = sourceRowStyle.getCell(4).getCellStyle();
+            CellStyle sourceCellStyle5 = sourceRowStyle.getCell(5).getCellStyle();
+            CellStyle sourceCellStyle6 = sourceRowStyle.getCell(6).getCellStyle();
 
             //Extracring Barcodes
             ArrayList<String> barcodes = new ArrayList<>();
@@ -70,6 +70,7 @@ public class ExcelTemplateFiller {
                     if (currentRow == null) {
                         currentRow = sheet.createRow(row);
                     }
+                    currentRow.setHeight(sourceRowStyle.getHeight());
 
                     Cell cell0 = currentRow.createCell(0);
                     cell0.setCellStyle(sourceCellStyle0);
@@ -87,7 +88,14 @@ public class ExcelTemplateFiller {
                     cell6.setCellStyle(sourceCellStyle6);
 
                     cell0.setCellValue(count);
-                    cell2.setCellValue(Optional.ofNullable(sample.getCoordinates()).orElse(""));
+
+                    String coordinates = Optional.ofNullable(sample.getCoordinates()).orElse("");
+                    String deliveryInfo = "";
+                    if (sample.getSampleDelivery() != null) {
+                        deliveryInfo = " (Box " + sample.getSampleDelivery().getRunningNumber() + ")";
+                    }
+                    cell2.setCellValue(coordinates + deliveryInfo);
+
                     cell3.setCellValue(Optional.ofNullable(sample.getSample_barcode()).orElse(""));
                     cell4.setCellValue(Optional.ofNullable(sample.getSample_amount()).orElse(""));
                     cell5.setCellValue(Optional.ofNullable(sample.getSample_type()).orElse(""));
@@ -97,7 +105,14 @@ public class ExcelTemplateFiller {
 
                 else {
                     sheet.getRow(row).getCell(0).setCellValue(count);
-                    sheet.getRow(row).getCell(2).setCellValue(Optional.ofNullable(sample.getCoordinates()).orElse(""));
+
+                    String coordinates = Optional.ofNullable(sample.getCoordinates()).orElse("");
+                    String deliveryInfo = "";
+                    if (sample.getSampleDelivery() != null) {
+                        deliveryInfo = " (Box " + sample.getSampleDelivery().getRunningNumber() + ")";
+                    }
+                    sheet.getRow(row).getCell(2).setCellValue(coordinates + deliveryInfo);
+
                     sheet.getRow(row).getCell(3).setCellValue(Optional.ofNullable(sample.getSample_barcode()).orElse(""));
                     sheet.getRow(row).getCell(4).setCellValue(Optional.ofNullable(sample.getSample_amount()).orElse(""));
                     sheet.getRow(row).getCell(5).setCellValue(Optional.ofNullable(sample.getSample_type()).orElse(""));
@@ -108,6 +123,7 @@ public class ExcelTemplateFiller {
 
             }
 
+            workbook.setPrintArea(0, 0, 6, 0, 10 + barcodes.size());
             // Write changes to the output file
             workbook.write(baos);
         } catch (Exception e) {

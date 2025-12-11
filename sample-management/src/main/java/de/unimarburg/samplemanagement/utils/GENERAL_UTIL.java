@@ -104,21 +104,21 @@ public class GENERAL_UTIL {
     }
 
     public static String toOrdinal(int number) {
-        if (number < 0) {
+        if (number <= 0) {
             return String.valueOf(number);
         }
         String[] words = { "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth" };
-        if (number < words.length) {
-            return words[number];
+        if (number <= words.length) {
+            return words[number - 1];
         }
         String[] suffixes = new String[] { "th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th" };
-        switch ((number + 1) % 100) {
+        switch (number % 100) {
             case 11:
             case 12:
             case 13:
-                return (number + 1) + "th";
+                return number + "th";
             default:
-                return (number + 1) + suffixes[(number + 1) % 10];
+                return number + suffixes[number % 10];
         }
     }
 
