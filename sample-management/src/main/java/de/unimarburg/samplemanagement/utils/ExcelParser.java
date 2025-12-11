@@ -257,14 +257,14 @@ public class ExcelParser {
 
         // Skip to Row 4 (index 3) for Study Name
         if (iterator.hasNext()) {
-            // skip 3 rows
-            for (int i = 0; i < 3 && iterator.hasNext(); i++) iterator.next();
+            // skip 2 rows
+            for (int i = 0; i < 2 && iterator.hasNext(); i++) iterator.next();
 
-            Row studyNameRow = sheet.getRow(3); // Row 4 (index 3)
-            studyName = (String) getCellValue(studyNameRow.getCell(3), cellType.STRING); // Column D (index 3)
+            Row studyNameRow = sheet.getRow(2); // Row 3 (index 2)
+            studyName = (String) getCellValue(studyNameRow.getCell(5), cellType.STRING); // Column F (index 5)
             System.out.println("Study name is : " + studyName);
 
-            Row deliveryDateRow = sheet.getRow(5);
+            Row deliveryDateRow = sheet.getRow(4);
             deliveryDate = (Date) getCellValue(deliveryDateRow.getCell(3), cellType.DATE);
             System.out.println("Delivery date is : " + deliveryDate);
         } else {
@@ -279,17 +279,15 @@ public class ExcelParser {
             throw new IOException("Selected study does not match the study in the file");
         }
 
-        // 🔴 Assuming assay/analysis name is no longer provided in the new sheet
-        // If it *is*, please let me know where it appears so I can re-add this:
-        // Row assay = sheet.getRow(3); // <- previously used row 4
-        // String analysename = (String) getCellValue(assay.getCell(5), cellType.STRING);
+        String analysename = (String) getCellValue(sheet.getRow(3).getCell(5), cellType.STRING);
 
-        // TEMPORARY placeholder: using first available analysisType
-        selectedAnalysisType = study.getAnalysisTypes().stream().findFirst().orElseThrow(() ->
-                new IOException("No analysis types found for the study"));
+        selectedAnalysisType = study.getAnalysisTypes().stream()
+                .filter(at -> at.getAnalysisName().equals(analysename))
+                .findFirst()
+                .orElseThrow(() -> new IOException("Analysis type '" + analysename + "' not found in the study"));
 
         // Sample data starts from Row 11 (index 10)
-        int startRow = 10;
+        int startRow = 11;
 
         Map<String, String> map = new HashMap<>();
         for (int i = startRow; i <= sheet.getLastRowNum(); i++) {
@@ -298,16 +296,16 @@ public class ExcelParser {
                 String barcode = "";
                 try {
                     System.out.println("in barcode");
-                    barcode = (String) getCellValue(row.getCell(2), cellType.STRING); // Column C (index 1)
+                    barcode = (String) getCellValue(row.getCell(3), cellType.STRING); // Column D (index 3)
                 } catch (IOException e) {
                     System.out.println("in catch");
-                    Double barcodeDouble = (Double) getCellValue(row.getCell(2), cellType.NUMERIC);
+                    Double barcodeDouble = (Double) getCellValue(row.getCell(3), cellType.NUMERIC);
                     barcode = String.valueOf(barcodeDouble).split("\\.")[0];
                 }
 
-                // Assuming Analysis Result is in Column E (index 4)
+                // Assuming Analysis Result is in Column G (index 6)
                 System.out.println("before map");
-                map.put(barcode, String.valueOf(row.getCell(4))); // update from cell(6) to cell(4)
+                map.put(barcode, String.valueOf(row.getCell(6)));
             }
         }
 
@@ -333,10 +331,10 @@ public class ExcelParser {
         inputStream.close();
     }
 
-    public Analysis findCorrectAnalysis(List<Analysis> list, String barcode){
+    public Analysis findCorrectAnalysis(List<Analysis> list, String barcode) throws IOException {
         return list.stream()
-                .filter(analysis -> barcode.equals(analysis.getSample().getSample_barcode()))
-                .findFirst().get();
-
+                .filter(analysis -> analysis.getSample() != null && barcode.equals(analysis.getSample().getSample_barcode()))
+                .findFirst()
+                .orElseThrow(() -> new IOException("Analysis for barcode '" + barcode + "' not found."));
     }
 }
