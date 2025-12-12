@@ -237,7 +237,7 @@ public class CreateStudyReport extends HorizontalLayout {
 
                 ByteArrayInputStream pdfStream = pdfReportService.generatePdf(study, selectedSender, selectedAnalysisTypes, selectedDeliveries);
 
-                StreamResource resource = new StreamResource("/tmp/study_report.pdf", () -> pdfStream);
+                StreamResource resource = new StreamResource("study_report.pdf", () -> pdfStream);
 
                 if (downloadLink == null) {
                     downloadLink = new Anchor(resource, "Download PDF");
