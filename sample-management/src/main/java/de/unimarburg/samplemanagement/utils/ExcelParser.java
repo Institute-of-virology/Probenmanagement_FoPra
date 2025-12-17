@@ -69,6 +69,10 @@ public class ExcelParser {
                 boxNumber = String.valueOf(boxNumberDouble).split("\\.")[0];
             }
 
+            if (boxNumber == null || boxNumber.trim().isEmpty()) {
+                throw new IOException("Box number is missing in the uploaded file.");
+            }
+
         } else {
             throw new IOException("Empty Excel File");
         }
