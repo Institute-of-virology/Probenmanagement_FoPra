@@ -205,7 +205,6 @@ public class PdfReportService {
                 Paragraph studyDetails = new Paragraph()
                         .add("Study: ")
                         .add(new Text(study.getStudyName()).setBold())
-                        .add(", " + (study.getStartDate() != null ? study.getStartDate().toString() : "N/A") + "-" + (study.getEndDate() != null ? study.getEndDate().toString() : "N/A"))
                         .setFont(calibriFont)
                         .setFontSize(10)
                         .setMargins(10, 0, 5, 0);

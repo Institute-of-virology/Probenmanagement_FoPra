@@ -122,7 +122,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
         sampleGrid.setItems(samples);
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
         sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type");
-        sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");
+        sampleGrid.addColumn(sample -> GENERAL_UTIL.formatSampleAmount(sample.getSample_amount())).setHeader("Sample Amount");
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
             String header = analysisType.getAnalysisName();

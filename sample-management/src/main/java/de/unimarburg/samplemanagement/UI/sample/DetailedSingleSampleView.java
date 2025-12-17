@@ -10,6 +10,7 @@ import de.unimarburg.samplemanagement.model.Sample;
 import de.unimarburg.samplemanagement.repository.SampleRepository;
 import de.unimarburg.samplemanagement.repository.SubjectRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
+import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -44,7 +45,7 @@ public class DetailedSingleSampleView extends HorizontalLayout {
         grid.addColumn(Sample::getDateOfShipment).setHeader("Sample Date");
         grid.addColumn(sample -> sample.getSampleDelivery().getRunningNumber()).setHeader("Sample Delivery Running Number");
         grid.addColumn(Sample::getSample_type).setHeader("Sample Type");
-        grid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");
+        grid.addColumn(sample -> GENERAL_UTIL.formatSampleAmount(sample.getSample_amount())).setHeader("Sample Amount");
         grid.addColumn(Sample::getCoordinates).setHeader("Coordinates");
         for (int i = 0; i<selectedSample.getListOfAnalysis().size(); i++){
             AnalysisType analysisType = selectedSample.getListOfAnalysis().get(i).getAnalysisType();

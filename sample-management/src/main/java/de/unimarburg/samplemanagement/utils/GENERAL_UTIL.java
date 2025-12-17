@@ -127,4 +127,14 @@ public class GENERAL_UTIL {
     }
 
 
+    public static String formatSampleAmount(String amount) {
+        if (amount != null && !amount.isEmpty()) {
+            try {
+                return String.valueOf((int) Float.parseFloat(amount));
+            } catch (NumberFormatException e) {
+                return amount;
+            }
+        }
+        return amount;
+    }
 }
