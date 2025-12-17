@@ -142,7 +142,7 @@ public class ExcelTemplateFiller {
 
     private static Analysis findByName(String name, List<Analysis> list) {
         for (Analysis s:list) {
-            if (s.getAnalysisType().getAnalysisName().equals(name)) {
+            if (name.startsWith(s.getAnalysisType().getAnalysisName())) {
                 return s;
             }
         }

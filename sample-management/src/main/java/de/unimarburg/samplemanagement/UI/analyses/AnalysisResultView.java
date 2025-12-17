@@ -101,11 +101,15 @@ public class AnalysisResultView extends HorizontalLayout {
                 ));
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
+            String header = analysisType.getAnalysisName();
+            if (analysisType.getAnalysisUnit() != null && !analysisType.getAnalysisUnit().isEmpty()) {
+                header += " (" + analysisType.getAnalysisUnit() + ")";
+            }
             sampleGrid.addColumn(sample -> {
                 Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
                 String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
                 return display;
-            }).setHeader(analysisType.getAnalysisName());
+            }).setHeader(header);
         }
 
         body.add(searchLayout, sampleGrid);
