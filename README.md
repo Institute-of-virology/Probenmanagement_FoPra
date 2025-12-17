@@ -46,7 +46,7 @@ The Usage of an IDE, such as IntelliJ IDEA is recommended when working with the 
 mvn clean install 
 ```
 
-1. Set the environment variables of the run configuration.
+4. Set the environment variables of the run configuration.
 
 ```bash
 DB_USER=postgres;DB_PASSWORD=<your Database password>
@@ -66,6 +66,65 @@ To start using the sample management system, follow these steps:
     ```
     
 3. Follow the on-screen instructions to begin managing your samples.
+
+## Testing
+
+This project contains a growing suite of automated tests to ensure code quality and prevent regressions. The tests are structured in multiple layers to cover different aspects of the application.
+
+### How to Run Tests
+
+To run the entire test suite, use the following Maven command from the `sample-management` directory:
+
+```bash
+mvnw.cmd test
+```
+(or `./mvnw test` on Linux/macOS)
+
+### Test Environment
+
+The tests run in a dedicated test environment with the following configuration:
+-   **Database:** An in-memory H2 database is used to ensure that tests are fast and do not affect the real database.
+-   **Test Properties:** Test-specific properties are defined in `src/test/resources/application.properties`. This includes dummy API keys and feature flags to control the application's behavior during tests.
+-   **Database Migrations:** The automatic database schema migration with Flyway is disabled in the test environment to allow for a clean database for each test run. This is controlled by the `app.flyway.enabled=false` property and the `@ConditionalOnProperty` annotation on the `FlywayInitializer` class.
+
+### Testing Strategy & Progress
+
+The test suite is being built incrementally in the following phases:
+
+**Phase 1: Foundational Unit & Integration Tests (Completed)**
+
+This phase focused on setting up the test environment and creating a foundational set of tests for the core backend components.
+
+**Components Tested:**
+-   **Unit Tests:**
+    -   `SampleDelivery`: Verifies the business logic for calculating the running number of a delivery.
+    -   `ExcelTemplateFiller`: Verifies the content and structure of the generated Excel workplace lists.
+-   **Integration Tests:**
+    -   `StudyRepository`: Verifies creating, reading, and updating studies in the database.
+    -   `SampleRepository`: Verifies creating, reading, and updating samples and their relationships.
+    -   `AnalysisRepository`: Verifies creating and reading analyses and their relationships.
+    -   `StudyService`: Verifies the business logic for managing analysis types within a study.
+
+**Phase 2: Advanced Backend & Report Testing (In Progress)**
+
+This phase focuses on expanding the test coverage to more complex backend features and the PDF report generation.
+
+**Completed Activities:**
+-   **Refactored PDF Report Generation:** The PDF generation logic was moved from the `CreateStudyReport` UI component into a new, dedicated `PdfReportService`. This improves the application's architecture and makes the logic easier to test.
+-   **Added PDF Service Test:** A unit test for the `PdfReportService` was created to ensure the PDF generation process works correctly.
+-   **Expanded Integration Tests:** The integration tests for `StudyService` were expanded to cover more complex business logic, such as the filtering of studies.
+
+**Next Steps:**
+-   Continue to expand integration tests to cover more edge cases and complex scenarios for the existing components.
+
+**Phase 3: UI and End-to-End Testing (Planned)**
+
+This phase will focus on testing the application's UI and the complete user workflows from end to end.
+
+**Planned Activities:**
+-   Set up a UI testing framework (e.g., Vaadin TestBench).
+-   Write E2E tests for critical user flows, such as creating a study, adding samples, and generating reports through the UI.
+
 
 ## Imprint
 Institut für Virologie Marburg<br />

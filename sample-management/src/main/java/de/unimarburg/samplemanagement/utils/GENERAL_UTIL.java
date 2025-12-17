@@ -63,6 +63,10 @@ public class GENERAL_UTIL {
         return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getDateOfShipment()), "dd.MM.yyyy");
     }
 
+    public static Renderer<Sample> renderDateYYYYMMDD() {
+        return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getDateOfShipment()), "yyyy/MM/dd");
+    }
+
 
     public static String readFileToString(String resourcename) {
         //get resource

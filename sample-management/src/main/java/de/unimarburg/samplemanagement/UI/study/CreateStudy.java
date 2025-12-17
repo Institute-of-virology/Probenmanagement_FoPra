@@ -45,6 +45,10 @@ public class CreateStudy extends HorizontalLayout {
         startdate.setValue(LocalDate.now());
         enddate.setPlaceholder("End Date");
         enddate.setValue(LocalDate.now());
+        DatePicker.DatePickerI18n singleFormatI18n = new DatePicker.DatePickerI18n();
+        singleFormatI18n.setDateFormat("yyyy/MM/dd");
+        startdate.setI18n(singleFormatI18n);
+        enddate.setI18n(singleFormatI18n);
         //todo: add more metadatat
 
         Button save = new Button("Save");

@@ -91,11 +91,11 @@ public class ManualSampleEditing extends HorizontalLayout {
                 .addColumn(Sample::getDateOfShipment)
                 .setHeader("Date of Shipment")
                 .setSortable(true)
-                .setRenderer(GENERAL_UTIL.renderDate()).setResizable(true);
+                .setRenderer(GENERAL_UTIL.renderDateYYYYMMDD()).setResizable(true);
         Grid.Column<Sample> validatedAtColumn = sampleGrid
                 .addColumn(sample -> {
                     if (sample.isValidated() && sample.getValidatedAt() != null) {
-                        return new SimpleDateFormat("dd.MM.yyyy").format(sample.getValidatedAt());
+                        return new SimpleDateFormat("yyyy/MM/dd").format(sample.getValidatedAt());
                     } else {
                         return "Not validated";
                     }
@@ -163,6 +163,9 @@ public class ManualSampleEditing extends HorizontalLayout {
 
         // Editor for shipment date
         DatePicker shipmentDateField = new DatePicker();
+        DatePicker.DatePickerI18n singleFormatI18n = new DatePicker.DatePickerI18n();
+        singleFormatI18n.setDateFormat("yyyy/MM/dd");
+        shipmentDateField.setI18n(singleFormatI18n);
         binder.forField(shipmentDateField)
                 .withConverter(new LocalDateToDateConverter())
                 .bind(Sample::getDateOfShipment, Sample::setDateOfShipment);
