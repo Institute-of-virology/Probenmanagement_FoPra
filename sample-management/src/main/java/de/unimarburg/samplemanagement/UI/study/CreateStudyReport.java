@@ -107,7 +107,7 @@ public class CreateStudyReport extends HorizontalLayout {
             sampleGrid.addColumn(sample -> {
                 Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
                 String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
-                return display;
+                return GENERAL_UTIL.formatSampleAmount(display);
             }).setHeader(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + ")");
         }
 
