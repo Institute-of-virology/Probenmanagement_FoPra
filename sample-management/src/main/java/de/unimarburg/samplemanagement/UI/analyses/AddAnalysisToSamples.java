@@ -71,7 +71,7 @@ public class AddAnalysisToSamples extends HorizontalLayout {
         //sample info
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
         sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type");
-        sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");
+        sampleGrid.addColumn(sample -> GENERAL_UTIL.formatSampleAmount(sample.getSample_amount())).setHeader("Sample Amount");
 
         // get unique analysis types to avoid duplicates in the grid header
         List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()

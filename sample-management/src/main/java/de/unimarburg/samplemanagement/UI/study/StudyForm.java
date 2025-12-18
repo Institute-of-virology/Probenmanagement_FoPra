@@ -27,11 +27,16 @@ public class StudyForm extends FormLayout {
     TextArea sponsor = new TextArea("Sponsor");
     TextField remark = new TextField("Remarks");
     DatePicker endDate = new DatePicker("End Date");
+
     Button save = new Button("Save");
     Button delete = new Button("Delete");
     Button close = new Button("Cancel");
 
     public StudyForm() {
+        DatePicker.DatePickerI18n singleFormatI18n = new DatePicker.DatePickerI18n();
+        singleFormatI18n.setDateFormat("yyyy/MM/dd");
+        startDate.setI18n(singleFormatI18n);
+        endDate.setI18n(singleFormatI18n);
         binder.bindInstanceFields(this);
         // Add a label to show the date format pattern
         add(studyName,

@@ -63,6 +63,10 @@ public class GENERAL_UTIL {
         return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getDateOfShipment()), "dd.MM.yyyy");
     }
 
+    public static Renderer<Sample> renderDateYYYYMMDD() {
+        return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getDateOfShipment()), "yyyy/MM/dd");
+    }
+
 
     public static String readFileToString(String resourcename) {
         //get resource
@@ -123,4 +127,14 @@ public class GENERAL_UTIL {
     }
 
 
+    public static String formatSampleAmount(String amount) {
+        if (amount != null && !amount.isEmpty()) {
+            try {
+                return String.valueOf((int) Float.parseFloat(amount));
+            } catch (NumberFormatException e) {
+                return amount;
+            }
+        }
+        return amount;
+    }
 }

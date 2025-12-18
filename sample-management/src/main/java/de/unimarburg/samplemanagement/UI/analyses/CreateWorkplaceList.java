@@ -122,9 +122,13 @@ public class CreateWorkplaceList extends HorizontalLayout {
         sampleGrid.setItems(samples);
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
         sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type");
-        sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");
+        sampleGrid.addColumn(sample -> GENERAL_UTIL.formatSampleAmount(sample.getSample_amount())).setHeader("Sample Amount");
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
+            String header = analysisType.getAnalysisName();
+            if (analysisType.getAnalysisUnit() != null && !analysisType.getAnalysisUnit().isEmpty()) {
+                header += " (" + analysisType.getAnalysisUnit() + ")";
+            }
             sampleGrid.addComponentColumn(sample -> {
                 Checkbox checkbox = new Checkbox();
                 boolean hasAnalysis = sample.getListOfAnalysis().stream()
@@ -132,7 +136,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
                 checkbox.setValue(hasAnalysis);
                 checkbox.setReadOnly(true);
                 return checkbox;
-            }).setHeader(analysisType.getAnalysisName());
+            }).setHeader(header);
         }
 
         return sampleGrid;
@@ -141,7 +145,13 @@ public class CreateWorkplaceList extends HorizontalLayout {
     private RadioButtonGroup<String> createRadioButtonGroup(List<AnalysisType> uniqueAnalysisTypes) {
         RadioButtonGroup<String> radioButtonGroup = new RadioButtonGroup<>();
         radioButtonGroup.setLabel("Assay");
-        radioButtonGroup.setItems(uniqueAnalysisTypes.stream().map(AnalysisType::getAnalysisName).toArray(String[]::new));
+        radioButtonGroup.setItems(uniqueAnalysisTypes.stream().map(analysisType -> {
+            String item = analysisType.getAnalysisName();
+            if (analysisType.getAnalysisUnit() != null && !analysisType.getAnalysisUnit().isEmpty()) {
+                item += " (" + analysisType.getAnalysisUnit() + ")";
+            }
+            return item;
+        }).toArray(String[]::new));
         return radioButtonGroup;
     }
 
@@ -185,7 +195,8 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
             date = datePicker.getValue();
             ArrayList<Sample> sampleList = new ArrayList<>();
-            String selectedAssay = radioButtonGroup.getValue();
+            String selectedAssayWithUnit = radioButtonGroup.getValue();
+            String selectedAssay = selectedAssayWithUnit.split("\\s+\\(")[0];
             ArrayList<Sample> selectedSampleCopy = new ArrayList<>(selectedSampleBarcodes.stream()
                     .filter(sample -> sample.getListOfAnalysis().stream()
                             .anyMatch(analysis -> analysis.getAnalysisType().getAnalysisName().equals(selectedAssay)))
@@ -250,12 +261,25 @@ public class CreateWorkplaceList extends HorizontalLayout {
     }
 
     private Map<String, String> collectData(RadioButtonGroup<String> radioButtonGroup, HorizontalLayout textFieldsLayout, String protocolName, Integer plateNr) {
+        String assayNameWithUnit = Optional.ofNullable(radioButtonGroup.getValue()).orElse("");
+        String assayName = assayNameWithUnit.split("\\s+\\(")[0];
+        String assayUnit = "";
+        if (!assayName.isEmpty()) {
+            Study study = clientStateService.getClientState().getSelectedStudy();
+            Optional<AnalysisType> analysisType = study.getAnalysisTypes().stream()
+                    .filter(at -> at.getAnalysisName().equals(assayName))
+                    .findFirst();
+            if (analysisType.isPresent()) {
+                assayUnit = analysisType.get().getAnalysisUnit();
+            }
+        }
+
         return Map.of(
                 "operatorName", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(0)).getValue()).orElse(""),
                 "calculatorName", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
                 "freeTextField", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
                 "nr", plateNr.toString(),
-                "assay", Optional.ofNullable(radioButtonGroup.getValue()).orElse(""),
+                "assay", assayNameWithUnit,
                 "maxProListe", Optional.ofNullable(((IntegerField) textFieldsLayout.getComponentAt(3)).getValue()).map(String::valueOf).orElse(""),
                 "protocolName", protocolName
         );

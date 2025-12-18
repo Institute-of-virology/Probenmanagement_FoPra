@@ -205,7 +205,6 @@ public class PdfReportService {
                 Paragraph studyDetails = new Paragraph()
                         .add("Study: ")
                         .add(new Text(study.getStudyName()).setBold())
-                        .add(", " + (study.getStartDate() != null ? study.getStartDate().toString() : "N/A") + "-" + (study.getEndDate() != null ? study.getEndDate().toString() : "N/A"))
                         .setFont(calibriFont)
                         .setFontSize(10)
                         .setMargins(10, 0, 5, 0);
@@ -233,7 +232,7 @@ public class PdfReportService {
                     for (SampleDelivery delivery : mutableDeliveries) {
                         String deliveryInfo = String.format("%s delivery: Received on %s, %d samples.",
                             GENERAL_UTIL.toOrdinal(delivery.getRunningNumber()),
-                                delivery.getDeliveryDate() != null ? new SimpleDateFormat("dd.MM.yyyy").format(delivery.getDeliveryDate()) : "N/A",
+                                delivery.getDeliveryDate() != null ? new SimpleDateFormat("yyyy/MM/dd").format(delivery.getDeliveryDate()) : "N/A",
                                 delivery.getSamples() != null ? delivery.getSamples().size() : 0);
                         deliveryList.add(new ListItem(deliveryInfo));
                     }

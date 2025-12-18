@@ -135,7 +135,7 @@ public class CreateStudyReport extends HorizontalLayout {
         for (SampleDelivery sampleDelivery : sampleDeliveries) {
             Checkbox checkbox = new Checkbox(true);
             Div labelRunningNumber = new Div(GENERAL_UTIL.toOrdinal(sampleDelivery.getRunningNumber()) + " delivery");
-            Div labelDate = new Div(new SimpleDateFormat("dd.MM.yyyy").format(sampleDelivery.getDeliveryDate()));
+            Div labelDate = new Div(new SimpleDateFormat("yyyy/MM/dd").format(sampleDelivery.getDeliveryDate()));
             sampleDeliveriesCheckboxMap.put(sampleDelivery, checkbox.getValue());
             checkbox.addValueChangeListener(event -> {
                 sampleDeliveriesCheckboxMap.put(sampleDelivery, event.getValue());
