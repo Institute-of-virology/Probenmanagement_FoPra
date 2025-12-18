@@ -286,7 +286,7 @@ public class ExcelParser {
         String analysename = (String) getCellValue(sheet.getRow(3).getCell(5), cellType.STRING);
 
         selectedAnalysisType = study.getAnalysisTypes().stream()
-                .filter(at -> at.getAnalysisName().equals(analysename))
+                .filter(at -> analysename.startsWith(at.getAnalysisName()))
                 .findFirst()
                 .orElseThrow(() -> new IOException("Analysis type '" + analysename + "' not found in the study"));
 
