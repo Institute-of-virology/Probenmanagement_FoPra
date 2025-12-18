@@ -280,7 +280,7 @@ public class PdfReportService {
                     for (AnalysisType analysisType : selectedAnalysisTypes) {
                         Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
                         String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
-                        table.addCell(new Cell().add(new Paragraph(display)));
+                        table.addCell(new Cell().add(new Paragraph(GENERAL_UTIL.formatSampleAmount(display))));
                     }
                 }
 
