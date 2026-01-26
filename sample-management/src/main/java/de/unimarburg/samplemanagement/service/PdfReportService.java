@@ -88,7 +88,7 @@ public class PdfReportService {
 
             canvas.showTextAligned(p,
                     pageSize.getRight() - 60,
-                    pageSize.getTop() - 20,
+                    pageSize.getTop() - 30,
                     TextAlignment.RIGHT);
 
             canvas.close();
@@ -111,7 +111,7 @@ public class PdfReportService {
         PdfDocument pdfDoc = new PdfDocument(writer);
         pdfDoc.setDefaultPageSize(PageSize.A4);
         Document document = new Document(pdfDoc);
-        document.setMargins(75, 20, 36, 20);
+        document.setMargins(72, 72, 72, 72);
 
         try (InputStream fontStream = getClass().getClassLoader().getResourceAsStream("calibri.ttf")) {
             if (fontStream == null) {
