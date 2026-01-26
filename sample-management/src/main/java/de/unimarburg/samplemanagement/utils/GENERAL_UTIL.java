@@ -14,14 +14,23 @@ import de.unimarburg.samplemanagement.model.Analysis;
 import de.unimarburg.samplemanagement.model.Sample;
 import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.Date;
 
 @Component
@@ -81,6 +90,15 @@ public class GENERAL_UTIL {
         }
     }
 
+    public static void writeStringToFile(String resourceName, String content) throws IOException, URISyntaxException {
+        URL resourceUrl = GENERAL_UTIL.class.getClassLoader().getResource(resourceName);
+        if (resourceUrl == null) {
+            throw new FileNotFoundException("Resource " + resourceName + " not found.");
+        }
+        Path path = Paths.get(resourceUrl.toURI());
+        Files.writeString(path, content, StandardCharsets.UTF_8);
+    }
+
     public static String markdownToHtml(String markdown) {
         MutableDataSet options = new MutableDataSet();
         Parser parser = Parser.builder(options).build();
@@ -101,10 +119,12 @@ public class GENERAL_UTIL {
     }
 
     public static boolean hasRole(String role) {
-        return SecurityContextHolder.getContext()
+        Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
                 .getAuthentication()
-                .getAuthorities()
-                .contains(new SimpleGrantedAuthority(role));
+                .getAuthorities();
+        String fullRoleName = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        System.out.println("Checking for role: " + fullRoleName + ". Found authorities: " + authorities);
+        return authorities.contains(new SimpleGrantedAuthority(fullRoleName));
     }
 
     public static String toOrdinal(int number) {

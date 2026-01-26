@@ -88,7 +88,7 @@ public class PdfReportService {
 
             canvas.showTextAligned(p,
                     pageSize.getRight() - 60,
-                    pageSize.getTop() - 20,
+                    pageSize.getTop() - 30,
                     TextAlignment.RIGHT);
 
             canvas.close();
@@ -111,7 +111,7 @@ public class PdfReportService {
         PdfDocument pdfDoc = new PdfDocument(writer);
         pdfDoc.setDefaultPageSize(PageSize.A4);
         Document document = new Document(pdfDoc);
-        document.setMargins(75, 20, 36, 20);
+        document.setMargins(72, 72, 72, 72);
 
         try (InputStream fontStream = getClass().getClassLoader().getResourceAsStream("calibri.ttf")) {
             if (fontStream == null) {
@@ -288,9 +288,10 @@ public class PdfReportService {
                 document.add(table);
 
                 for (AnalysisType analysisType : selectedAnalysisTypes) {
-                    Paragraph textbaustein = new Paragraph(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + "): " + analysisType.getAnalysisDescription())
+                    Paragraph textbaustein = new Paragraph()
+                            .add(new Text(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + "): ").setBold())
+                            .add(new Text(analysisType.getAnalysisDescription()))
                             .setFont(calibriFont)
-                            .setBold()
                             .setFontSize(10)
                             .setMargins(10, 0, 10, 0);
                     document.add(textbaustein);
@@ -303,15 +304,14 @@ public class PdfReportService {
                 validationTable.setWidth(UnitValue.createPercentValue(100));
                 validationTable.setBorder(null);
 
-                validationTable.addCell(new Cell().add(new Paragraph("Technical validation" + "\n\n\n")
+                validationTable.addCell(new Cell().add(new Paragraph("Technical validation " + " ")
                                 .setFont(calibriBoldFont)
                                 .setFontSize(10)
                                 .setBold())
-                        .setMargins(10, 0, 0, 0)
                         .setBorder(null)
                         .setTextAlignment(TextAlignment.LEFT));
 
-                validationTable.addCell(new Cell().add(new Paragraph("Final validation" + "\n\n\n")
+                validationTable.addCell(new Cell().add(new Paragraph("Final validation" + " ")
                                 .setFont(calibriBoldFont)
                                 .setFontSize(10)
                                 .setBold())
@@ -321,12 +321,14 @@ public class PdfReportService {
                 validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
                                 .setFont(calibriFont)
                                 .setFontSize(10))
+                        .setPaddingTop(60)
                         .setBorder(null)
                         .setTextAlignment(TextAlignment.LEFT));
 
                 validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
                                 .setFont(calibriFont)
                                 .setFontSize(10))
+                        .setPaddingTop(60)
                         .setBorder(null)
                         .setTextAlignment(TextAlignment.RIGHT));
 
