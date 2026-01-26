@@ -10,6 +10,7 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.Route;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -25,7 +26,12 @@ public class Impressum extends HorizontalLayout {
     private Button cancelButton;
     private HorizontalLayout buttonLayout;
 
-    public Impressum() {
+    private final GENERAL_UTIL generalUtil; // Inject GENERAL_UTIL
+
+    @Autowired
+    public Impressum(GENERAL_UTIL generalUtil) { // Constructor injection
+        this.generalUtil = generalUtil;
+
         add(SIDEBAR_FACTORY.getSidebar(null));
         VerticalLayout contentLayout = new VerticalLayout();
         contentLayout.setSizeFull();
@@ -52,7 +58,7 @@ public class Impressum extends HorizontalLayout {
         buttonLayout.setVisible(false);
 
         // Set initial visibility based on role
-        boolean isAdmin = GENERAL_UTIL.hasRole("ADMIN");
+        boolean isAdmin = GENERAL_UTIL.hasRole("ADMIN"); // Still using static hasRole
         editButton.setVisible(isAdmin);
         buttonLayout.setVisible(false); // Ensure buttons are hidden initially
 
@@ -63,8 +69,8 @@ public class Impressum extends HorizontalLayout {
     }
 
     private void loadContent() {
-        String contentMD = GENERAL_UTIL.readFileToString(sourcefile);
-        String contentHTML = GENERAL_UTIL.markdownToHtml(contentMD);
+        String contentMD = generalUtil.readLegalFileToString(sourcefile); // Use non-static method
+        String contentHTML = GENERAL_UTIL.markdownToHtml(contentMD); // markdownToHtml is still static
         viewContent.removeAll();
         viewContent.add(new Html("<div>" + contentHTML + "</div>"));
         editContent.setValue(contentMD);
@@ -80,17 +86,17 @@ public class Impressum extends HorizontalLayout {
     private void switchToViewMode() {
         loadContent(); // Reload to ensure latest content is shown (in case of cancel)
         viewContent.setVisible(true);
-        editButton.setVisible(GENERAL_UTIL.hasRole("ADMIN")); // Re-check role on switch
+        editButton.setVisible(GENERAL_UTIL.hasRole("ADMIN")); // Still using static hasRole
         editContent.setVisible(false);
         buttonLayout.setVisible(false);
     }
 
     private void saveChanges() {
         try {
-            GENERAL_UTIL.writeStringToFile(sourcefile, editContent.getValue());
+            generalUtil.writeLegalFileToString(sourcefile, editContent.getValue()); // Use non-static method
             Notification.show("Content saved successfully!", 3000, Notification.Position.BOTTOM_START);
             switchToViewMode();
-        } catch (IOException | URISyntaxException e) {
+        } catch (IOException e) { // URISyntaxException is no longer thrown by writeLegalFileToString
             Notification.show("Error saving content: " + e.getMessage(), 5000, Notification.Position.BOTTOM_START);
             e.printStackTrace();
         }
