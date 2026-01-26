@@ -24,7 +24,7 @@ ARG https_proxy
 ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
 ENV HTTP_PROXY=${http_proxy}
-ENV HTTPS_PROXY=${https_proxy}
+ENV HTTPS_PROXY=${https_proxy}`
 WORKDIR /app
 COPY --from=builder /app/target/sample-management-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080

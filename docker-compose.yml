@@ -26,6 +26,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sample_management
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      APP_LEGAL_FILES_PATH: /app/legal_docs # This is the path inside the container
+    volumes:
+      - ./legal_docs_host:/app/legal_docs # Maps host directory to container directory
     depends_on:
       - db
     networks:
@@ -33,6 +36,8 @@ services:
 
 volumes:
   db_data:
+  # You might also want to define the new volume here if it's named, e.g.:
+  # legal_docs_volume:
 
 networks:
   app-network:

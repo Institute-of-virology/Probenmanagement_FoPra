@@ -1,11 +1,7 @@
 package de.unimarburg.samplemanagement.utils;
 
-import com.vaadin.flow.data.provider.DataKeyMapper;
 import com.vaadin.flow.data.renderer.LocalDateRenderer;
-import com.vaadin.flow.data.renderer.LocalDateTimeRenderer;
 import com.vaadin.flow.data.renderer.Renderer;
-import com.vaadin.flow.data.renderer.Rendering;
-import com.vaadin.flow.dom.Element;
 import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Node;
@@ -14,6 +10,7 @@ import de.unimarburg.samplemanagement.model.Analysis;
 import de.unimarburg.samplemanagement.model.Sample;
 import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -36,8 +34,16 @@ import java.util.Date;
 @Component
 public class GENERAL_UTIL {
     @Autowired
-    private static AddressStoreRepository addressStoreRepository;
+    private AddressStoreRepository addressStoreRepository; // Keep autowired, but not static
 
+    @Value("${app.legal.files.path:./legal_docs}")
+    private String legalFilesBasePath;
+
+    // Constructor for Spring to inject dependencies if needed.
+    public GENERAL_UTIL() {
+    }
+
+    // Existing static methods remain static
     public static String getAnalysisForSample(Sample sample, Long analysisTypeID) {
         try {
             return sample.getListOfAnalysis().stream()
@@ -54,10 +60,7 @@ public class GENERAL_UTIL {
         if (localDate == null) {
             return null;
         }
-        // Convert LocalDate to an Instant
         Instant instant = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
-
-        // Create a Date from the Instant
         return Date.from(instant);
     }
 
@@ -76,27 +79,39 @@ public class GENERAL_UTIL {
         return new LocalDateRenderer<>(sample -> convertToLocalDate(sample.getDateOfShipment()), "yyyy/MM/dd");
     }
 
+    // New non-static method for reading legal files
+    public String readLegalFileToString(String resourceName) {
+        Path externalPath = Paths.get(legalFilesBasePath, resourceName);
+        if (Files.exists(externalPath)) {
+            try {
+                return Files.readString(externalPath, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                System.err.println("Error reading from external path " + externalPath + ": " + e.getMessage());
+                // Fallback to classpath if external read fails
+            }
+        }
 
-    public static String readFileToString(String resourcename) {
-        //get resource
-        URL mdUrl = GENERAL_UTIL.class.getClassLoader().getResource(resourcename);
-        if (mdUrl == null) {
-            return "couldn't load "+resourcename;
-        }
-        try {
-            return new String(mdUrl.openStream().readAllBytes());
-        } catch (Exception e) {
-            return "couldn't load "+resourcename;
-        }
+        // Fallback to classpath (using a helper static method for classpath read)
+        return readFileFromClasspath(resourceName);
     }
 
-    public static void writeStringToFile(String resourceName, String content) throws IOException, URISyntaxException {
-        URL resourceUrl = GENERAL_UTIL.class.getClassLoader().getResource(resourceName);
-        if (resourceUrl == null) {
-            throw new FileNotFoundException("Resource " + resourceName + " not found.");
+    // New non-static method for writing legal files
+    public void writeLegalFileToString(String resourceName, String content) throws IOException {
+        Path externalPath = Paths.get(legalFilesBasePath, resourceName);
+        Files.createDirectories(externalPath.getParent()); // Ensure parent directories exist
+        Files.writeString(externalPath, content, StandardCharsets.UTF_8);
+    }
+
+    // Helper static method for reading from classpath (extracted from original readFileToString)
+    private static String readFileFromClasspath(String resourceName) {
+        try (InputStream is = GENERAL_UTIL.class.getClassLoader().getResourceAsStream(resourceName)) {
+            if (is == null) {
+                return "Couldn't load " + resourceName + " from classpath.";
+            }
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return "Couldn't load " + resourceName + " from classpath: " + e.getMessage();
         }
-        Path path = Paths.get(resourceUrl.toURI());
-        Files.writeString(path, content, StandardCharsets.UTF_8);
     }
 
     public static String markdownToHtml(String markdown) {
@@ -146,7 +161,6 @@ public class GENERAL_UTIL {
         }
     }
 
-
     public static String formatSampleAmount(String amount) {
         if (amount != null && !amount.isEmpty()) {
             try {
@@ -158,3 +172,4 @@ public class GENERAL_UTIL {
         return amount;
     }
 }
+
