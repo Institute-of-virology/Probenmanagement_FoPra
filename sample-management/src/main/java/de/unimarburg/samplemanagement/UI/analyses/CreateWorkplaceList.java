@@ -21,8 +21,11 @@ import de.unimarburg.samplemanagement.model.SampleDelivery;
 import de.unimarburg.samplemanagement.model.Study;
 import de.unimarburg.samplemanagement.service.ClientStateService;
 import de.unimarburg.samplemanagement.utils.ExcelTemplateFiller;
+import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -38,6 +41,8 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
     Anchor downloadLink = new Anchor("", "Download Workplace Lists");
     Div wrapperDiv = new Div(downloadLink);
+
+    private final Set<String> addedAnalysisTypeHeaders = new HashSet<>();
 
 
     @Autowired
@@ -59,7 +64,14 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
         selectedSampleBarcodes.addAll(study.getListOfSamples());
         List<Sample> samples = study.getListOfSamples();
-        Grid<Sample> sampleGrid = createSampleGrid(samples, study.getAnalysisTypes());
+
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(AnalysisType::getAnalysisName, at -> at, (a, b) -> a),
+                        m -> new ArrayList<>(m.values())
+                ));
+
+        Grid<Sample> sampleGrid = createSampleGrid(samples, uniqueAnalysisTypes);
 
         // Dropdown filter for deliveries
         HorizontalLayout filterLayout = new HorizontalLayout();
@@ -67,7 +79,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
         deliveryFilter.setLabel("Filter by Delivery");
         deliveryFilter.setItems(study.getSampleDeliveryList());
         deliveryFilter.setEmptySelectionAllowed(true);
-        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> String.valueOf(sampleDelivery.getRunningNumber())));
+        deliveryFilter.setRenderer(new TextRenderer<>(sampleDelivery -> GENERAL_UTIL.toOrdinal(sampleDelivery.getRunningNumber()) + " delivery"));
         deliveryFilter.addValueChangeListener(e -> {
             if (e.getValue() != null) {
                 sampleGrid.setItems(e.getValue().getSamples());
@@ -84,7 +96,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
         body.add(sampleGrid);
 
-        RadioButtonGroup<String> radioButtonGroup = createRadioButtonGroup(study.getAnalysisTypes());
+        RadioButtonGroup<String> radioButtonGroup = createRadioButtonGroup(uniqueAnalysisTypes);
         body.add(radioButtonGroup);
 
         DatePicker datePicker = createDatePicker();
@@ -110,9 +122,13 @@ public class CreateWorkplaceList extends HorizontalLayout {
         sampleGrid.setItems(samples);
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
         sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type");
-        sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount");
+        sampleGrid.addColumn(sample -> GENERAL_UTIL.formatSampleAmount(sample.getSample_amount())).setHeader("Sample Amount");
 
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
+            String header = analysisType.getAnalysisName();
+            if (analysisType.getAnalysisUnit() != null && !analysisType.getAnalysisUnit().isEmpty()) {
+                header += " (" + analysisType.getAnalysisUnit() + ")";
+            }
             sampleGrid.addComponentColumn(sample -> {
                 Checkbox checkbox = new Checkbox();
                 boolean hasAnalysis = sample.getListOfAnalysis().stream()
@@ -120,7 +136,7 @@ public class CreateWorkplaceList extends HorizontalLayout {
                 checkbox.setValue(hasAnalysis);
                 checkbox.setReadOnly(true);
                 return checkbox;
-            }).setHeader(analysisType.getAnalysisName());
+            }).setHeader(header);
         }
 
         return sampleGrid;
@@ -129,7 +145,13 @@ public class CreateWorkplaceList extends HorizontalLayout {
     private RadioButtonGroup<String> createRadioButtonGroup(List<AnalysisType> uniqueAnalysisTypes) {
         RadioButtonGroup<String> radioButtonGroup = new RadioButtonGroup<>();
         radioButtonGroup.setLabel("Assay");
-        radioButtonGroup.setItems(uniqueAnalysisTypes.stream().map(AnalysisType::getAnalysisName).toArray(String[]::new));
+        radioButtonGroup.setItems(uniqueAnalysisTypes.stream().map(analysisType -> {
+            String item = analysisType.getAnalysisName();
+            if (analysisType.getAnalysisUnit() != null && !analysisType.getAnalysisUnit().isEmpty()) {
+                item += " (" + analysisType.getAnalysisUnit() + ")";
+            }
+            return item;
+        }).toArray(String[]::new));
         return radioButtonGroup;
     }
 
@@ -173,7 +195,12 @@ public class CreateWorkplaceList extends HorizontalLayout {
 
             date = datePicker.getValue();
             ArrayList<Sample> sampleList = new ArrayList<>();
-            ArrayList<Sample> selectedSampleCopy = new ArrayList<>(selectedSampleBarcodes);
+            String selectedAssayWithUnit = radioButtonGroup.getValue();
+            String selectedAssay = selectedAssayWithUnit.split("\\s+\\(")[0];
+            ArrayList<Sample> selectedSampleCopy = new ArrayList<>(selectedSampleBarcodes.stream()
+                    .filter(sample -> sample.getListOfAnalysis().stream()
+                            .anyMatch(analysis -> analysis.getAnalysisType().getAnalysisName().equals(selectedAssay)))
+                    .collect(Collectors.toList()));
 
             IntegerField maxPerTableField = (IntegerField) textFieldsLayout.getComponentAt(3);
             int maxPerTable = Optional.ofNullable(maxPerTableField.getValue()).orElse(1000);
@@ -234,12 +261,25 @@ public class CreateWorkplaceList extends HorizontalLayout {
     }
 
     private Map<String, String> collectData(RadioButtonGroup<String> radioButtonGroup, HorizontalLayout textFieldsLayout, String protocolName, Integer plateNr) {
+        String assayNameWithUnit = Optional.ofNullable(radioButtonGroup.getValue()).orElse("");
+        String assayName = assayNameWithUnit.split("\\s+\\(")[0];
+        String assayUnit = "";
+        if (!assayName.isEmpty()) {
+            Study study = clientStateService.getClientState().getSelectedStudy();
+            Optional<AnalysisType> analysisType = study.getAnalysisTypes().stream()
+                    .filter(at -> at.getAnalysisName().equals(assayName))
+                    .findFirst();
+            if (analysisType.isPresent()) {
+                assayUnit = analysisType.get().getAnalysisUnit();
+            }
+        }
+
         return Map.of(
                 "operatorName", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(0)).getValue()).orElse(""),
-                "calculatorName" , Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
+                "calculatorName", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
                 "freeTextField", Optional.ofNullable(((TextField) textFieldsLayout.getComponentAt(1)).getValue()).orElse(""),
                 "nr", plateNr.toString(),
-                "assay", Optional.ofNullable(radioButtonGroup.getValue()).orElse(""),
+                "assay", assayNameWithUnit,
                 "maxProListe", Optional.ofNullable(((IntegerField) textFieldsLayout.getComponentAt(3)).getValue()).map(String::valueOf).orElse(""),
                 "protocolName", protocolName
         );
@@ -257,23 +297,9 @@ public class CreateWorkplaceList extends HorizontalLayout {
                 throw new FileNotFoundException("Template file not found: " + templatePath);
             }
 
-            File outputDir = new File("output");
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
-            }
-
-            String outputPath = "output/report.xlsx";
-            ExcelTemplateFiller.fillTemplate(templateInputStream, outputPath, data, sampleList, clientStateService.getClientState().getSelectedStudy(), date);
-
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            try (FileInputStream fileInputStream = new FileInputStream(outputPath)) {
-                byte[] buffer = new byte[1024];
-                int length;
-                while ((length = fileInputStream.read(buffer)) != -1) {
-                    byteArrayOutputStream.write(buffer, 0, length);
-                }
-            }
-            return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ExcelTemplateFiller.fillTemplate(templateInputStream, baos, data, sampleList, clientStateService.getClientState().getSelectedStudy(), date);
+            return new ByteArrayInputStream(baos.toByteArray());
         }
     }
 }

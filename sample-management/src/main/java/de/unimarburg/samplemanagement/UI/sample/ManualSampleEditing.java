@@ -2,6 +2,7 @@ package de.unimarburg.samplemanagement.UI.sample;
 
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.editor.Editor;
@@ -19,25 +20,31 @@ import de.unimarburg.samplemanagement.model.Subject;
 import de.unimarburg.samplemanagement.repository.SampleRepository;
 import de.unimarburg.samplemanagement.repository.SubjectRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
+import de.unimarburg.samplemanagement.service.SampleService;
 import de.unimarburg.samplemanagement.utils.DoubleToLongConverter;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Route("/ManualSampleEditing")
 public class ManualSampleEditing extends HorizontalLayout {
     ClientStateService clientStateService;
     SampleRepository sampleRepository;
     SubjectRepository subjectRepository;
+    SampleService sampleService;
+
     @Autowired
-    public ManualSampleEditing(ClientStateService clientStateService, SampleRepository sampleRepository, SubjectRepository subjectRepository) {
+    public ManualSampleEditing(ClientStateService clientStateService, SampleRepository sampleRepository, SubjectRepository subjectRepository, SampleService sampleService) {
         this.subjectRepository = subjectRepository;
         this.clientStateService = clientStateService;
         this.sampleRepository = sampleRepository;
+        this.sampleService = sampleService;
         add(SIDEBAR_FACTORY.getSidebar(clientStateService.getClientState().getSelectedStudy()));
         if (clientStateService.getClientState().getSelectedStudy() == null) {
             add("Please select a study");
@@ -50,7 +57,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         add(verticalLayout);
     }
 
-    private boolean isSampeValid(Sample selectedSample) {
+    private boolean isSampleValid(Sample selectedSample) {
         if (selectedSample == null) {
             return true;
         }
@@ -63,7 +70,7 @@ public class ManualSampleEditing extends HorizontalLayout {
         if (selectedSample.getSample_amount() == null || selectedSample.getSample_amount().isBlank()) {
             return false;
         }
-        if (selectedSample.getSampleDate() == null) {
+        if (selectedSample.getDateOfShipment() == null) {
             return false;
         }
         return true;
@@ -72,29 +79,68 @@ public class ManualSampleEditing extends HorizontalLayout {
     private VerticalLayout getContent() {
         VerticalLayout body = new VerticalLayout();
         Grid<Sample> sampleGrid = new Grid<>();
-        List<Sample> samples = sampleRepository.getSampleByStudyId(clientStateService.getClientState().getSelectedStudy().getId());
+        List<Sample> samples = sampleRepository.getSampleByStudyIdOrderByIdAsc(clientStateService.getClientState().getSelectedStudy().getId());
         sampleGrid.setItems(samples);
 
 
         // Define columns
-        Grid.Column<Sample> barcodeColumn = sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode").setSortable(true);
-        Grid.Column<Sample> typeColumn = sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type").setSortable(true);
-        Grid.Column<Sample> amountColumn = sampleGrid.addColumn(Sample::getSample_amount).setHeader("Sample Amount").setSortable(true);
-        Grid.Column<Sample> dateColumn = sampleGrid.addColumn(Sample::getSampleDate).setHeader("Sample Date").setSortable(true).setRenderer(GENERAL_UTIL.renderDate());
+        Grid.Column<Sample> barcodeColumn = sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode").setSortable(true).setResizable(true);
+        Grid.Column<Sample> typeColumn = sampleGrid.addColumn(Sample::getSample_type).setHeader("Sample Type").setSortable(true).setResizable(true);
+        Grid.Column<Sample> amountColumn = sampleGrid.addColumn(sample -> GENERAL_UTIL.formatSampleAmount(sample.getSample_amount())).setHeader("Sample Amount (in μl)").setSortable(true).setResizable(true);
+        Grid.Column<Sample> shipmentDateColumn = sampleGrid
+                .addColumn(Sample::getDateOfShipment)
+                .setHeader("Date of Shipment")
+                .setSortable(true)
+                .setRenderer(GENERAL_UTIL.renderDateYYYYMMDD()).setResizable(true);
+        Grid.Column<Sample> validatedAtColumn = sampleGrid
+                .addColumn(sample -> {
+                    if (sample.isValidated() && sample.getValidatedAt() != null) {
+                        return new SimpleDateFormat("yyyy/MM/dd").format(sample.getValidatedAt());
+                    } else {
+                        return "Not validated";
+                    }
+                })
+                .setHeader("Validated At")
+                .setSortable(true).setResizable(true);
+
         Grid.Column<Sample> sampleDelivery = sampleGrid.addColumn(sample -> {
             SampleDelivery sampleDelivery1 = sample.getSampleDelivery();
             if (sampleDelivery1 == null) {
                 return null;
             }
-            return sample.getSampleDelivery().getRunningNumber();
-        }).setHeader("Sample Delivery").setSortable(true);
-        Grid.Column<Sample> subjectAliasColumn = sampleGrid.addColumn(sample -> {
-            if (sample.getSubject() == null) {
-                return null;
+            return GENERAL_UTIL.toOrdinal(sample.getSampleDelivery().getRunningNumber()) + " delivery";
+        }).setHeader("Sample Delivery").setSortable(true).setResizable(true);
+        Grid.Column<Sample> coordinatesColumn = sampleGrid.addColumn(Sample::getCoordinates).setHeader("Coordinates").setSortable(true).setResizable(true);
+
+        // Add a delete button column
+        sampleGrid.addComponentColumn(sample -> {
+            if (sample.getId() == null) {
+                return new com.vaadin.flow.component.html.Div();
             }
-            return sample.getSubject().getAlias();
-        }).setHeader("Subject Alias").setSortable(true);
-        Grid.Column<Sample> coordinatesColumn = sampleGrid.addColumn(Sample::getCoordinates).setHeader("Coordinates").setSortable(true);
+            Button deleteButton = new Button("Delete");
+            deleteButton.addThemeVariants(com.vaadin.flow.component.button.ButtonVariant.LUMO_ERROR);
+            deleteButton.addClickListener(e -> {
+                // a confirmation dialog
+                com.vaadin.flow.component.dialog.Dialog dialog = new com.vaadin.flow.component.dialog.Dialog();
+                dialog.add("Are you sure you want to delete this sample?");
+                Button confirmButton = new Button("Confirm", event -> {
+                    try {
+                        sampleService.deleteSample(sample.getId());
+                        Notification.show("Sample deleted successfully.", 3000, Notification.Position.MIDDLE);
+                        // Remove the sample from the list and refresh the grid
+                        samples.remove(sample);
+                        sampleGrid.getDataProvider().refreshAll();
+                    } catch (IllegalStateException | IllegalArgumentException ex) {
+                        Notification.show(ex.getMessage(), 3000, Notification.Position.MIDDLE);
+                    }
+                    dialog.close();
+                });
+                Button cancelButton = new Button("Cancel", event -> dialog.close());
+                dialog.add(new HorizontalLayout(confirmButton, cancelButton));
+                dialog.open();
+            });
+            return deleteButton;
+        }).setHeader("Actions").setResizable(true);
 
         // Create the editor and its binder
         Editor<Sample> editor = sampleGrid.getEditor();
@@ -115,60 +161,22 @@ public class ManualSampleEditing extends HorizontalLayout {
         binder.bind(amountField, Sample::getSample_amount, Sample::setSample_amount);
         amountColumn.setEditorComponent(amountField);
 
-        DatePicker dateField = new DatePicker();
-        binder.forField(dateField)
+        // Editor for shipment date
+        DatePicker shipmentDateField = new DatePicker();
+        DatePicker.DatePickerI18n singleFormatI18n = new DatePicker.DatePickerI18n();
+        singleFormatI18n.setDateFormat("yyyy/MM/dd");
+        shipmentDateField.setI18n(singleFormatI18n);
+        binder.forField(shipmentDateField)
                 .withConverter(new LocalDateToDateConverter())
-                .bind(Sample::getSampleDate, Sample::setSampleDate);
-        dateColumn.setEditorComponent(dateField);
+                .bind(Sample::getDateOfShipment, Sample::setDateOfShipment);
+        shipmentDateColumn.setEditorComponent(shipmentDateField);
 
-        NumberField sampleDeliveryField = new NumberField();
-        sampleDeliveryField.setMin(0);
-        sampleDeliveryField.setStep(1);
-        binder.forField(sampleDeliveryField)
-                .withConverter(new DoubleToLongConverter())
-                .bind(sample -> {
-                    if (sample.getSampleDelivery() == null) {
-                        return null;
-                    }
-                    return (long) sample.getSampleDelivery().getRunningNumber();
-                }, (sample, runningNumber) -> {
-                    if (runningNumber == null || runningNumber<0 || runningNumber>=clientStateService.getClientState().getSelectedStudy().getSampleDeliveryList().size()){
-                        Notification.show("please specify a valid sample delivery running number (between 0 and "+(clientStateService.getClientState().getSelectedStudy().getSampleDeliveryList().size()-1)+")");
-                        editor.cancel();
-                        return;
-                    }
-                    SampleDelivery sampleDeliveryForRunningNumber = clientStateService.getClientState().getSelectedStudy().getSampleDeliveryList().get(runningNumber.intValue());
-                    sample.setSampleDelivery(sampleDeliveryForRunningNumber);
-                    sampleDeliveryForRunningNumber.getSamples().add(sample);
-                });
-        sampleDelivery.setEditorComponent(sampleDeliveryField);
-
-        NumberField subjectIdField = new NumberField();
-        subjectIdField.setMin(0);
-        subjectIdField.setStep(1);
-        binder.forField(subjectIdField)
-                .withConverter(new DoubleToLongConverter())
-                .bind(sample -> {
-                    if (sample.getSubject() == null) {
-                        return null;
-                    }
-                    return sample.getSubject().getAlias();
-                }, (sample, alias) -> {
-                    if (alias == null ){
-                        Notification.show("please specify corresponding subject alias");
-                        return;
-                    }
-                    Subject subject;
-                    Optional<Subject> subjectOpt = subjectRepository.getSubjectByAliasAndStudy(alias, clientStateService.getClientState().getSelectedStudy());
-                    if (subjectOpt.isPresent()){
-                        subject = subjectOpt.get();
-                    } else {
-                        subject = new Subject(alias,clientStateService.getClientState().getSelectedStudy());
-                        subject = subjectRepository.save(subject);
-                    }
-                    sample.setSubject(subject);
-                });
-        subjectAliasColumn.setEditorComponent(subjectIdField);
+        ComboBox<SampleDelivery> sampleDeliveryComboBox = new ComboBox<>();
+        sampleDeliveryComboBox.setPlaceholder("Select a delivery");
+        sampleDeliveryComboBox.setItems(clientStateService.getClientState().getSelectedStudy().getSampleDeliveryList());
+        sampleDeliveryComboBox.setItemLabelGenerator(sd -> GENERAL_UTIL.toOrdinal(sd.getRunningNumber()) + " delivery");
+        binder.bind(sampleDeliveryComboBox, Sample::getSampleDelivery, Sample::setSampleDelivery);
+        sampleDelivery.setEditorComponent(sampleDeliveryComboBox);
 
         TextField coordinatesField = new TextField();
         binder.bind(coordinatesField, Sample::getCoordinates, Sample::setCoordinates);
@@ -179,8 +187,9 @@ public class ManualSampleEditing extends HorizontalLayout {
             Sample editedSample = new Sample();
             if (!binder.writeBeanIfValid(editedSample)){
                 Notification.show("Please make a valid sample");
+                return;
             }
-            if (!isSampeValid(editedSample)){
+            if (!isSampleValid(editedSample)){
                 Notification.show("Please make a valid sample");
                 return;
             }
@@ -210,6 +219,35 @@ public class ManualSampleEditing extends HorizontalLayout {
         // Add save listener
         editor.addSaveListener(event -> {
             Sample editedSample = event.getItem();
+            if (editedSample == null) {
+                return;
+            }
+            if (editedSample.getSubject() == null) {
+                SampleDelivery delivery = editedSample.getSampleDelivery();
+                if (delivery == null) {
+                    Notification.show("Please select a sample delivery");
+                    editor.editItem(editedSample);
+                    return;
+                }
+                Optional<Subject> subjectOpt = delivery.getSamples().stream()
+                        .filter(s -> s.getSubject() != null)
+                        .map(Sample::getSubject)
+                        .findFirst();
+
+                if (subjectOpt.isPresent()) {
+                    editedSample.setSubject(subjectOpt.get());
+                } else {
+                    // No other sample in the delivery has a subject, so create a new one.
+                    long alias;
+                    do {
+                        alias = (long) (10000 + new Random().nextInt(90000));
+                    } while (subjectRepository.getSubjectByAliasAndStudy(alias, editedSample.getStudy()).isPresent());
+
+                    Subject newSubject = new Subject(alias, editedSample.getStudy());
+                    newSubject = subjectRepository.save(newSubject);
+                    editedSample.setSubject(newSubject);
+                }
+            }
             try {
                 sampleRepository.save(editedSample);
             } catch (Exception e){
@@ -270,6 +308,7 @@ public class ManualSampleEditing extends HorizontalLayout {
 
 
         body.add(new HorizontalLayout(addButton, saveButton, discardButton));
+        sampleGrid.setAllRowsVisible(true);
         body.add(sampleGrid);
         return body;
     }

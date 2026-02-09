@@ -1,74 +1,54 @@
 package de.unimarburg.samplemanagement.UI.study;
 
-import com.itextpdf.io.font.PdfEncodings;
-import com.itextpdf.io.image.ImageData;
-import com.itextpdf.io.image.ImageDataFactory;
-import com.itextpdf.kernel.events.Event;
-import com.itextpdf.kernel.events.IEventHandler;
-import com.itextpdf.kernel.events.PdfDocumentEvent;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
-import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
-import com.itextpdf.layout.Canvas;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.*;
-import com.itextpdf.layout.property.HorizontalAlignment;
-import com.itextpdf.layout.property.TextAlignment;
-import com.itextpdf.layout.property.UnitValue;
+import com.vaadin.flow.component.accordion.Accordion;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.tabs.Tab;
+import com.vaadin.flow.component.tabs.Tabs;
+import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import de.unimarburg.samplemanagement.model.*;
-import de.unimarburg.samplemanagement.repository.AddressStoreRepository;
-import de.unimarburg.samplemanagement.repository.ReportAuthorRepository;
+import de.unimarburg.samplemanagement.repository.StudyRepository;
 import de.unimarburg.samplemanagement.service.ClientStateService;
+import de.unimarburg.samplemanagement.service.PdfReportService;
 import de.unimarburg.samplemanagement.utils.GENERAL_UTIL;
 import de.unimarburg.samplemanagement.utils.SIDEBAR_FACTORY;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 
 @Route("/CreateReport")
 public class CreateStudyReport extends HorizontalLayout {
 
-    private final AddressStoreRepository addressStoreRepository;
-    private final ReportAuthorRepository reportAuthorRepository;
+    private final StudyRepository studyRepository;
+    private final PdfReportService pdfReportService;
     private Study study;
     private Map<AnalysisType, Boolean> analysisCheckboxMap = new HashMap<>();
     private Map<SampleDelivery, Boolean> sampleDeliveriesCheckboxMap = new HashMap<>();
     Grid<Sample> sampleGrid;
-    private ClientStateService clientStateService;
-    private List<ReportAuthor> reportAuthors = new ArrayList<>();
     private Button printPdfButton;
 
     private Anchor downloadLink;
 
     @Autowired
-    public CreateStudyReport(ClientStateService clientStateService, AddressStoreRepository addressStoreRepository, ReportAuthorRepository reportAuthorRepository) {
-        this.clientStateService = clientStateService;
-        this.reportAuthorRepository = reportAuthorRepository;
-        this.addressStoreRepository = addressStoreRepository;
+    public CreateStudyReport(ClientStateService clientStateService, StudyRepository studyRepository, PdfReportService pdfReportService) {
+        this.studyRepository = studyRepository;
+        this.pdfReportService = pdfReportService;
+        setSizeFull();
         add(SIDEBAR_FACTORY.getSidebar(clientStateService.getClientState().getSelectedStudy()));
-        if (clientStateService == null || clientStateService.getClientState().getSelectedStudy() == null) {
+        if (clientStateService.getClientState().getSelectedStudy() == null) {
             add("Please select a Study");
             return;
         }
@@ -82,360 +62,255 @@ public class CreateStudyReport extends HorizontalLayout {
 
     private VerticalLayout loadContent() {
         VerticalLayout body = new VerticalLayout();
+        body.setSizeFull();
+
+        Tab contentSelectionTab = new Tab("Content Selection");
+        Tab reportDetailsTab = new Tab("Report Details");
+        Tab generateReportTab = new Tab("Generate Report");
+
+        Tabs tabs = new Tabs(contentSelectionTab, reportDetailsTab, generateReportTab);
+
+        Div contentSelectionPage = new Div();
+        contentSelectionPage.setSizeFull();
+        Div reportDetailsPage = new Div();
+        reportDetailsPage.setSizeFull();
+        reportDetailsPage.setVisible(false);
+        Div generateReportPage = new Div();
+        generateReportPage.setSizeFull();
+        generateReportPage.setVisible(false);
+
+        // Content for Content Selection Tab
+        VerticalLayout contentSelectionLayout = new VerticalLayout();
+        contentSelectionLayout.setSizeFull();
         List<Sample> samples = study.getListOfSamples();
-
         sampleGrid = new Grid<>();
-
+        sampleGrid.setSizeFull();
+        sampleGrid.setItems(samples);
         sampleGrid.addColumn(Sample::getSample_barcode).setHeader("Sample Barcode");
 
-        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes();
+        List<AnalysisType> uniqueAnalysisTypes = study.getAnalysisTypes().stream()
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toMap(
+                                AnalysisType::getAnalysisName,
+                                at -> at,
+                                (a, b) -> a
+                        ),
+                        map -> new java.util.ArrayList<>(map.values())
+                ));
 
-        // Add columns for each unique analysis
         if (uniqueAnalysisTypes.isEmpty()) {
             body.add("No Analyses available for Study: " + study.getStudyName());
             return body;
         }
+
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
-            sampleGrid.addColumn(sample -> GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId()))
-                    .setHeader(analysisType.getAnalysisName());
+            sampleGrid.addColumn(sample -> {
+                Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                String display = (result == null || result.toString().isBlank()) ? "-" : result.toString();
+                return GENERAL_UTIL.formatSampleAmount(display);
+            }).setHeader(analysisType.getAnalysisName() + " (" + analysisType.getAnalysisUnit() + ")");
         }
 
-        body.add(sampleGrid);
+        Accordion accordion = new Accordion();
 
-        body.add("Select Analysis for report:");
-
-        // Add horizontal layout underneath the grid
-        HorizontalLayout analysisSelection = new HorizontalLayout();
+        // Analysis Selection Accordion Panel
+        VerticalLayout analysisSelectionLayout = new VerticalLayout();
         for (AnalysisType analysisType : uniqueAnalysisTypes) {
             Checkbox checkbox = new Checkbox();
+            checkbox.setValue(true);
             Div labelDiv = new Div(analysisType.getAnalysisName());
-
-            // Initialize checkbox value and store it in the map
             analysisCheckboxMap.put(analysisType, checkbox.getValue());
-
             checkbox.addValueChangeListener(event -> {
-                // Update the checkbox value in the map
                 analysisCheckboxMap.put(analysisType, event.getValue());
+                updateGridItems();
             });
-            analysisSelection.add(checkbox, labelDiv);
+            analysisSelectionLayout.add(new HorizontalLayout(checkbox, labelDiv));
         }
-        body.add(analysisSelection);
+        accordion.add("Select Analysis for report", analysisSelectionLayout);
 
-        body.add("Select deliveries for report:");
-        HorizontalLayout sampleDeliverySelection = new HorizontalLayout();
+        // Delivery Selection Accordion Panel
+        VerticalLayout deliverySelectionLayout = new VerticalLayout();
         List<SampleDelivery> sampleDeliveries = study.getSampleDeliveryList();
         sampleDeliveries.sort(Comparator.comparing(SampleDelivery::getRunningNumber));
         for (SampleDelivery sampleDelivery : sampleDeliveries) {
-            Checkbox checkbox = new Checkbox();
-            Div labelRunningNumber = new Div("Delivery " + sampleDelivery.getRunningNumber());
-            Div labelDate = new Div(new SimpleDateFormat("dd.MM.yyyy").format(sampleDelivery.getDeliveryDate()));
-            VerticalLayout labelLayout = new VerticalLayout(checkbox,labelRunningNumber,labelDate);
-
-            // Initialize checkbox value and store it in the map
+            Checkbox checkbox = new Checkbox(true);
+            Div labelRunningNumber = new Div(GENERAL_UTIL.toOrdinal(sampleDelivery.getRunningNumber()) + " delivery");
+            Div labelDate = new Div(new SimpleDateFormat("yyyy/MM/dd").format(sampleDelivery.getDeliveryDate()));
             sampleDeliveriesCheckboxMap.put(sampleDelivery, checkbox.getValue());
-
             checkbox.addValueChangeListener(event -> {
-                // Update the checkbox value in the map
                 sampleDeliveriesCheckboxMap.put(sampleDelivery, event.getValue());
-                updateSampleGrid(sampleDeliveries.stream().filter(sampleDeliveriesCheckboxMap::get).toList());
+                updateGridItems();
             });
-            sampleDeliverySelection.add(labelLayout);
+            deliverySelectionLayout.add(new HorizontalLayout(checkbox, labelRunningNumber, labelDate));
         }
-        body.add(sampleDeliverySelection);
+        accordion.add("Select deliveries for report", deliverySelectionLayout);
 
-        reportAuthors = reportAuthorRepository.findAll();
+        contentSelectionLayout.add(sampleGrid, accordion);
+        contentSelectionLayout.expand(sampleGrid);
+        contentSelectionPage.add(contentSelectionLayout);
+
+        // Content for Report Details Tab
+        VerticalLayout reportDetailsLayout = new VerticalLayout();
+        TextArea methodValidationArea = new TextArea("Method Validation");
+        methodValidationArea.setValue(study.getMethodValidation() != null ? study.getMethodValidation() : "");
+        methodValidationArea.setReadOnly(true);
+        methodValidationArea.setWidthFull();
+
+        TextArea qualityControlArea = new TextArea("Quality Control");
+        qualityControlArea.setValue(study.getQualityControl() != null ? study.getQualityControl() : "");
+        qualityControlArea.setReadOnly(true);
+        qualityControlArea.setWidthFull();
+
+        TextArea remarksArea = new TextArea("Remarks");
+        remarksArea.setValue(study.getRemarks() != null ? study.getRemarks() : "");
+        remarksArea.setReadOnly(true);
+        remarksArea.setWidthFull();
+
+        Button saveButton = new Button("Save");
+        saveButton.setVisible(false);
+
+        Button editButton = new Button("Edit", event -> {
+            methodValidationArea.setReadOnly(false);
+            qualityControlArea.setReadOnly(false);
+            remarksArea.setReadOnly(false);
+            saveButton.setVisible(true);
+        });
+
+        saveButton.addClickListener(event -> {
+            study.setMethodValidation(methodValidationArea.getValue());
+            study.setQualityControl(qualityControlArea.getValue());
+            study.setRemarks(remarksArea.getValue());
+            studyRepository.save(study);
+
+            methodValidationArea.setReadOnly(true);
+            qualityControlArea.setReadOnly(true);
+            remarksArea.setReadOnly(true);
+            saveButton.setVisible(false);
+            Notification.show("Report details saved.");
+        });
+        reportDetailsLayout.add(new HorizontalLayout(editButton, saveButton));
+        reportDetailsLayout.add(methodValidationArea, qualityControlArea, remarksArea);
+        reportDetailsPage.add(reportDetailsLayout);
+
+        // Content for Generate Report Tab
+        VerticalLayout generateReportLayout = new VerticalLayout();
+        Button openDialogButton = new Button("Open Report Generation Dialog");
+        generateReportLayout.add(openDialogButton);
+
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Generate Report");
+
+        VerticalLayout dialogLayout = new VerticalLayout();
+        List<String> senders = new ArrayList<>();
+        if (study.getSender1() != null && !study.getSender1().isEmpty()) {
+            senders.add(study.getSender1());
+        }
+        if (study.getSender2() != null && !study.getSender2().isEmpty()) {
+            senders.add(study.getSender2());
+        }
+        if (study.getSender3() != null && !study.getSender3().isEmpty()) {
+            senders.add(study.getSender3());
+        }
+
+        ComboBox<String> senderComboBox = new ComboBox<>("Select Sender");
+        senderComboBox.setItems(senders);
 
         printPdfButton = new Button("Create Report");
+        printPdfButton.setEnabled(false);
+
+        senderComboBox.addValueChangeListener(event -> printPdfButton.setEnabled(event.getValue() != null));
+
         printPdfButton.addClickListener(event -> {
             try {
-                // Generate the PDF file
-                String dest = "study_report.pdf";
-                generatePdf(dest);
-
-                // Create a StreamResource for downloading the generated PDF
-                StreamResource resource = new StreamResource("study_report.pdf", () -> {
-                    try {
-                        return new ByteArrayInputStream(java.nio.file.Files.readAllBytes(Paths.get(dest)));
-                    } catch (Exception e) {
-                        Notification.show("Error generating PDF: " + e.getMessage());
-                        return null;
-                    }
-                });
-
-                // Add the download link to the UI
-                if (downloadLink != null) {
-                    remove(downloadLink);
+                String selectedSender = senderComboBox.getValue();
+                if (selectedSender == null) {
+                    Notification.show("Please select a sender.");
+                    return;
                 }
-                downloadLink = new Anchor(resource, "");
-                downloadLink.getElement().setAttribute("download", true);
-                Button downloadButton = new Button("Download PDF");
-                downloadLink.add(downloadButton);
-                body.add(downloadLink);
+
+                List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
+                        .filter(analysisCheckboxMap::get)
+                        .toList();
+                List<SampleDelivery> selectedDeliveries = sampleDeliveriesCheckboxMap.keySet().stream()
+                        .filter(sampleDeliveriesCheckboxMap::get)
+                        .toList();
+
+                ByteArrayInputStream pdfStream = pdfReportService.generatePdf(study, selectedSender, selectedAnalysisTypes, selectedDeliveries);
+
+                StreamResource resource = new StreamResource("study_report.pdf", () -> pdfStream);
+
+                if (downloadLink == null) {
+                    downloadLink = new Anchor(resource, "Download PDF");
+                    downloadLink.getElement().setAttribute("download", true);
+                    generateReportLayout.add(downloadLink);
+                } else {
+                    downloadLink.setHref(resource);
+                }
+                dialog.close();
             } catch (Exception e) {
                 Notification.show("Error generating PDF: " + e.getMessage());
+                e.printStackTrace();
             }
         });
-        body.add(printPdfButton);
+
+        dialogLayout.add(senderComboBox, printPdfButton);
+        dialog.add(dialogLayout);
+
+        Button cancelButton = new Button("Cancel", e -> dialog.close());
+        dialog.getFooter().add(cancelButton);
+
+        openDialogButton.addClickListener(event -> dialog.open());
+        generateReportPage.add(generateReportLayout);
+
+        tabs.addSelectedChangeListener(event -> {
+            contentSelectionPage.setVisible(false);
+            reportDetailsPage.setVisible(false);
+            generateReportPage.setVisible(false);
+
+            if (tabs.getSelectedTab() == contentSelectionTab) {
+                contentSelectionPage.setVisible(true);
+            } else if (tabs.getSelectedTab() == reportDetailsTab) {
+                reportDetailsPage.setVisible(true);
+            } else if (tabs.getSelectedTab() == generateReportTab) {
+                generateReportPage.setVisible(true);
+            }
+        });
+
+        body.add(tabs, contentSelectionPage, reportDetailsPage, generateReportPage);
+        body.expand(contentSelectionPage);
 
         return body;
     }
 
 
-    private void updateSampleGrid(List<SampleDelivery> sampleDeliveries) {
-        List<Sample> samples = new ArrayList<>();
-        for (SampleDelivery sampleDelivery : sampleDeliveries) {
-            samples.addAll(sampleDelivery.getSamples());
-        }
-        sampleGrid.setItems(samples);
-    }
-
-    public class HeaderFooterHandler implements IEventHandler {
-        protected Image logo;
-
-        public HeaderFooterHandler(Image logo) {
-            this.logo = logo;
-        }
-
-        @Override
-        public void handleEvent(Event event) {
-            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
-            PdfDocument pdfDoc = docEvent.getDocument();
-            PdfCanvas pdfCanvas = new PdfCanvas(docEvent.getPage());
-            Canvas canvas = new Canvas(pdfCanvas, pdfDoc, pdfDoc.getDefaultPageSize());
-
-            // Add the logo
-            logo.setFixedPosition((pdfDoc.getDefaultPageSize().getWidth() - logo.getImageScaledWidth()) / 2,
-                    pdfDoc.getDefaultPageSize().getTop() - logo.getImageScaledHeight() - 10);
-            canvas.add(logo);
-            canvas.close();
-        }
-    }
-
-    private void generatePdf(String dest) throws IOException, URISyntaxException {
-        PdfWriter writer = new PdfWriter(dest);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        pdfDoc.setDefaultPageSize(PageSize.A4);
-        Document document = new Document(pdfDoc);
-
-        // Load the Calibri font from the resources directory
-        String calibriFontPath = Paths.get(getClass().getClassLoader().getResource("calibri.ttf").toURI()).toString();
-        PdfFont calibriFont = PdfFontFactory.createFont(calibriFontPath, PdfEncodings.IDENTITY_H, true);
-        PdfFont calibriBoldFont = PdfFontFactory.createFont(calibriFontPath, PdfEncodings.IDENTITY_H, true);
-
-        // Load the logo
-        String logoPath = Paths.get(getClass().getClassLoader().getResource("uni-logo.png").toURI()).toString();
-        ImageData logoImageData = ImageDataFactory.create(logoPath);
-        Image logoImage = new Image(logoImageData).scaleToFit(100, 100).setHorizontalAlignment(HorizontalAlignment.CENTER);
-
-        // Set the header handler
-        pdfDoc.addEventHandler(PdfDocumentEvent.END_PAGE, new HeaderFooterHandler(logoImage));
-
-        // Set the default font for the document
-        document.setFont(calibriFont);
-        document.setFontSize(11);
-
-        // Add spacing after logo
-        document.add(new Paragraph("\n"));
-
-        // Add the header
-        Paragraph header = new Paragraph("Philipps-Universität Marburg -- Institut für Virologie -- Immunmonitoringlabor")
-                .setFont(calibriBoldFont)
-                .setFontSize(11)
-                .setBold()
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(header);
-
-        // Add a horizontal line separator
-        document.add(new LineSeparator(new SolidLine()));
-
-        // Create the three-column table for sender details and fixed address
-        float[] columnWidths = {2, 3, 5};
-        Table senderTable = new Table(columnWidths);
-        senderTable.setWidth(UnitValue.createPercentValue(100));
-
-        // Add sender details and fixed address
-        for (int i = 0; i < reportAuthors.size(); i++) {
-            ReportAuthor reportAuthor = reportAuthors.get(i);
-            senderTable.addCell(new Cell().add(new Paragraph(reportAuthor.getName()).setFont(calibriBoldFont).setFontSize(11)).setBold().setBorder(null));
-            senderTable.addCell(new Cell().add(new Paragraph(reportAuthor.getTitle()).setFont(calibriBoldFont).setFontSize(11)).setBorder(null));
-
-            if (i == 0) {
-                senderTable.addCell(new Cell(reportAuthors.size(), 1).add(new Paragraph(addressStoreRepository.getOwnAddress())
-                                .setFont(calibriFont)
-                                .setFontSize(11))
-                        .setBorder(null));
-            }
-        }
-
-        document.add(senderTable);
-
-        // Add a horizontal line separator
-        document.add(new LineSeparator(new SolidLine()));
-
-        // Add recipient addresses
-        Paragraph recipient = new Paragraph("Recipient Address:\n" + study.getSponsor())
-                .setFont(calibriFont)
-                .setFontSize(11);
-        document.add(recipient);
-
-        // Spacing
-        document.add(new Paragraph("\n"));
-
-        // Add "Date of Report Generation: " followed by the current date and time
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        Paragraph dateOfReport = new Paragraph("Date of Report Generation: " + now.format(formatter))
-                .setFont(calibriFont)
-                .setFontSize(11)
-                .setBold();
-        document.add(dateOfReport);
-
-        // Add spacing after recipient address
-        document.add(new Paragraph("\n"));
-
-        // Add "Report on the results of the serological analysis" in bold
-        Paragraph reportTitle = new Paragraph("Report on the results of the serological analysis")
-                .setFont(calibriBoldFont)
-                .setFontSize(11)
-                .setBold();
-        document.add(reportTitle);
-
-        // Add spacing after report title
-        document.add(new Paragraph("\n"));
-
-        // Add "Analytical methods: " followed by AnalysisTypeName for selected checkboxes
-        StringBuilder methods = new StringBuilder("Analytical methods: ");
-        List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
-                .filter(analysisCheckboxMap::get)
+    private void updateGridItems() {
+        List<SampleDelivery> selectedDeliveries = study.getSampleDeliveryList().stream()
+                .filter(delivery -> sampleDeliveriesCheckboxMap.getOrDefault(delivery, false))
                 .toList();
-        for (AnalysisType analysisType : selectedAnalysisTypes) {
-            methods.append(analysisType.getAnalysisName()).append(", ");
-        }
-        if (methods.length() > 0) {
-            methods.setLength(methods.length() - 2); // Remove the last comma and space
-        }
-        Paragraph analyticalMethods = new Paragraph(methods.toString())
-                .setFont(calibriFont)
-                .setFontSize(11);
-        document.add(analyticalMethods);
 
-        // Add spacing after analytical methods
-        document.add(new Paragraph("\n"));
+        List<Sample> samplesToFilter = selectedDeliveries.stream()
+                .flatMap(delivery -> delivery.getSamples().stream())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
 
-        // Add "Study: " followed by StudyName and studyDate
-        Paragraph studyDetails = new Paragraph("Study: " + study.getStudyName() + ", " + study.getStartDate().toString()+"-"+study.getEndDate().toString())
-                .setFont(calibriFont)
-                .setFontSize(11);
-        document.add(studyDetails);
+        List<AnalysisType> selectedAnalysisTypes = analysisCheckboxMap.keySet().stream()
+                .filter(analysisType -> analysisCheckboxMap.getOrDefault(analysisType, true))
+                .toList();
 
-
-        // Add fields for details to the study (handwritten by user)
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("Methodenvalidierung: ").setBold());
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("Qualitätskontrolle: ").setBold());
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("Bemerkungen: ").setBold());
-        document.add(new Paragraph("\n"));
-
-
-        // Add spacing after study details
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("The results can be found on the following page(s).").setBold());
-        document.add(new Paragraph("\n"));
-        document.add(new Paragraph("The test report may not be reproduced without the written consent of the laboratory.").setBold());
-
-        // Add a page break here to start the table on a new page
-        document.add(new AreaBreak());
-
-
-        // Create the table with appropriate number of columns, including the numbering column
-        float[] tableColumnWidths = new float[selectedAnalysisTypes.size() + 2]; // +2 for numbering and sample ID
-        tableColumnWidths[0] = 1; // For numbering column
-        tableColumnWidths[1] = 2; // For Sample ID column, make it wider
-        for (int i = 2; i < tableColumnWidths.length; i++) {
-            tableColumnWidths[i] = 1; // Make each analysis column narrower
-        }
-        Table table = new Table(tableColumnWidths);
-        table.setWidth(UnitValue.createPercentValue(100)); // Set the table width to 100% of the page
-
-        // Add table headers
-        table.addHeaderCell(new Cell().add(new Paragraph("No.")).setFont(calibriFont).setFontSize(11));
-        table.addHeaderCell(new Cell().add(new Paragraph("Sample ID")).setFont(calibriFont).setFontSize(11));
-        for (AnalysisType analysisType : selectedAnalysisTypes) {
-            table.addHeaderCell(new Cell().add(new Paragraph(analysisType.getAnalysisName())).setFont(calibriFont).setFontSize(11));
-        }
-
-        // Add sample data to the table
-        List<Sample> samples = study.getListOfSamples();
-        for (int i = 0; i < samples.size(); i++) {
-            Sample sample = samples.get(i);
-            table.addCell(new Cell().add(new Paragraph(String.valueOf(i + 1))).setFont(calibriFont).setFontSize(11)); // Add numbering
-            table.addCell(new Cell().add(new Paragraph(sample.getSample_barcode())).setFont(calibriFont).setFontSize(11));
-            for (AnalysisType analysisType : selectedAnalysisTypes) {
-                String result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
-                table.addCell(new Cell().add(new Paragraph(result != null ? result : "")));
+        long totalAnalyses = analysisCheckboxMap.keySet().size();
+        if (selectedAnalysisTypes.size() < totalAnalyses) {
+            if (!selectedAnalysisTypes.isEmpty()) {
+                samplesToFilter = samplesToFilter.stream()
+                        .filter(sample -> selectedAnalysisTypes.stream()
+                                .anyMatch(analysisType -> {
+                                    Object result = GENERAL_UTIL.getAnalysisForSample(sample, analysisType.getId());
+                                    return result != null && !result.toString().isBlank();
+                                }))
+                        .collect(java.util.stream.Collectors.toList());
+            } else {
+                samplesToFilter.clear();
             }
         }
-
-        // Add the table normally to follow the flow of the document
-        document.add(new Paragraph("Results: ").setBold());
-        document.add(table);
-        document.add(new Paragraph("\n"));
-
-        // Add "Textbaustein " followed by analysisName and description
-        for (AnalysisType analysisType : selectedAnalysisTypes) {
-            Paragraph textbaustein = new Paragraph("Textbaustein " + analysisType.getAnalysisName() + ": " + analysisType.getAnalysisDescription())
-                    .setFont(calibriFont)
-                    .setFontSize(11);
-            document.add(textbaustein);
-            document.add(new Paragraph("\n")); // Add line break after each analysis type
-        }
-
-
-        // Add extra spacing before the final section
-        document.add(new Paragraph("\n"));
-
-        // Add the final section with "Technical validation" and "Final validation" in a table
-        float[] validationColumnWidths = {1, 1};
-        Table validationTable = new Table(validationColumnWidths);
-        validationTable.setWidth(UnitValue.createPercentValue(100));
-        validationTable.setBorder(null);
-
-        // Add validation headers
-        validationTable.addCell(new Cell().add(new Paragraph("Technical validation" + "\n\n\n")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(11)
-                        .setBold())
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.LEFT));
-
-        validationTable.addCell(new Cell().add(new Paragraph("Final validation" + "\n\n\n")
-                        .setFont(calibriBoldFont)
-                        .setFontSize(11)
-                        .setBold())
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.RIGHT));
-
-        // Add signature lines
-        validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
-                        .setFont(calibriFont)
-                        .setFontSize(11))
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.LEFT));
-
-        validationTable.addCell(new Cell().add(new Paragraph("Datum, Unterschrift")
-                        .setFont(calibriFont)
-                        .setFontSize(11))
-                .setBorder(null)
-                .setTextAlignment(TextAlignment.RIGHT));
-
-        document.add(validationTable);
-
-        document.close();
-        pdfDoc.close();
+        sampleGrid.setItems(samplesToFilter);
     }
-
 }
-
-

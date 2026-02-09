@@ -19,15 +19,18 @@ public class SampleDelivery {
     Study study;
 
     @OneToMany(mappedBy = "sampleDelivery", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Sample> samples;
 
     @Temporal(TemporalType.DATE)
     private Date deliveryDate;
 
+    private String boxNumber;
 
+    @Transient
     public int getRunningNumber() {
         List<SampleDelivery> sampleDeliveries = study.getSampleDeliveryList();
-        return sampleDeliveries.indexOf(this);
+        return sampleDeliveries.indexOf(this) + 1;
     }
 
     public void addSample(Sample sample) {

@@ -9,6 +9,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import de.unimarburg.samplemanagement.utils.ExcelParser;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -57,13 +58,15 @@ public class DownloadLinksArea extends VerticalLayout {
             }
             try {
                 excelParser.readExcelFile(getStream(selectedFile));
+                Notification.show("File processed successfully");
+                UI.getCurrent().navigate("VerifySampleDelivery");
+            } catch (DataIntegrityViolationException ex) {
+                Notification.show("Duplicate barcode detected");
             } catch (IOException ex) {
                 Notification.show("Error processing file: " + ex.getMessage());
-                return;
+            } catch (Exception ex) {
+                Notification.show("Unexpected error: " + ex.getMessage());
             }
-            Notification.show("File processed successfully");
-            //Navigate to veriufication
-            UI.getCurrent().navigate("VerifySampleDelivery");
         }));
         add(fileGrid, horizontalLayout);
     }

@@ -30,11 +30,14 @@ public class CreateStudy extends HorizontalLayout {
         add(SIDEBAR_FACTORY.getSidebar(null));
         VerticalLayout vl = new VerticalLayout();
         TextField studyname = new TextField("Study Name");
+        studyname.setRequired(true);
         TextField numberOfSubjects = new TextField("Expected Number Of Subjects");
         numberOfSubjects.setWidth("300px");
         TextField abnahmezahl = new TextField("Expected Number of Sample Deliveries");
         abnahmezahl.setWidth("300px");
         TextArea sender1 = new TextArea("Sender1");
+        sender1.setRequired(true);
+        sender1.setErrorMessage("At least one sender is required");
         TextArea sender2 = new TextArea("Sender2");
         TextArea sender3 = new TextArea("Sender3");
         TextArea sponsor = new TextArea("Sponsor");
@@ -45,10 +48,18 @@ public class CreateStudy extends HorizontalLayout {
         startdate.setValue(LocalDate.now());
         enddate.setPlaceholder("End Date");
         enddate.setValue(LocalDate.now());
+        DatePicker.DatePickerI18n singleFormatI18n = new DatePicker.DatePickerI18n();
+        singleFormatI18n.setDateFormat("yyyy/MM/dd");
+        startdate.setI18n(singleFormatI18n);
+        enddate.setI18n(singleFormatI18n);
         //todo: add more metadatat
 
         Button save = new Button("Save");
         save.addClickListener(e->{
+            if (studyname.getValue().isEmpty() || sender1.getValue().isEmpty()) {
+                Notification.show("Please enter all required fields.");
+                return;
+            }
             //save study to database
             saveStudy(studyname.getValue(),startdate.getValue(),enddate.getValue(),numberOfSubjects.getValue(),
                     abnahmezahl.getValue(), sender1.getValue(), sender2.getValue(),
@@ -80,7 +91,7 @@ public class CreateStudy extends HorizontalLayout {
         study.setStudyName(studyname);
         study.setStartDate(GENERAL_UTIL.convertToDate(startdate));
         study.setEndDate(GENERAL_UTIL.convertToDate(enddate));
-        study.setExpectedNumberOfSampeDeliveries(abnahmeZahl);
+        study.setExpectedNumberOfSampleDeliveries(abnahmeZahl);
         study.setRemark(remarks);
         study.setSponsor(sponsor);
         study.setSender1(sender1);

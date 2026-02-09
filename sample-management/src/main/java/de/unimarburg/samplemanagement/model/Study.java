@@ -9,8 +9,9 @@ import org.hibernate.validator.constraints.UniqueElements;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
-
 
 @Getter
 @Setter
@@ -20,12 +21,16 @@ import java.util.stream.Collectors;
         @UniqueConstraint(columnNames = "study_name")
 })
 public class Study {
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
+
+    @Column(name = "study_name", nullable = false, unique = true)
     private String studyName;
+
     private String expectedNumberOfSubjects;
-    private String expectedNumberOfSampeDeliveries;
+    private String expectedNumberOfSampleDeliveries;
     private String sender1;
     private String sender2;
     private String sender3;
@@ -39,21 +44,36 @@ public class Study {
     private Date endDate;
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<Subject> listOfSubjects;
+    @OrderBy("id ASC")
+    private List<Subject> listOfSubjects = new ArrayList<>();
 
     @OneToMany(mappedBy = "study", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<SampleDelivery> sampleDeliveryList;
+    @OrderBy("id ASC")
+    private List<SampleDelivery> sampleDeliveryList = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @UniqueElements
-    private List<AnalysisType> analysisTypes;
+    @JoinTable(
+            name = "study_analysis_types",
+            joinColumns = @JoinColumn(name = "study_id"),
+            inverseJoinColumns = @JoinColumn(name = "analysis_types_id")
+    )
+    private Set<AnalysisType> analysisTypes = new HashSet<>();
 
+    @Column(columnDefinition = "TEXT")
+    private String methodValidation;
 
+    @Column(columnDefinition = "TEXT")
+    private String qualityControl;
+
+    @Column(columnDefinition = "TEXT")
+    private String remarks;
+
+    @Transient
     public int getNumberOfSubjects() {
         return listOfSubjects.size();
     }
 
-
+    @Transient
     public List<Sample> getListOfSamples() {
         return listOfSubjects.stream()
                 .map(Subject::getListOfSamples)
@@ -61,13 +81,8 @@ public class Study {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
-
-
+    @Transient
     public String getName() {
         return studyName;
     }
-    public List<AnalysisType> getAnalysisTypes() {
-        return analysisTypes;
-    }
-
 }
