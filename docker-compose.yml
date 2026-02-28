@@ -3,6 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:latest
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -20,6 +21,7 @@ services:
       args:
         http_proxy: http://www-proxy2.uni-marburg.de:3128
         https_proxy: http://www-proxy2.uni-marburg.de:3128
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
