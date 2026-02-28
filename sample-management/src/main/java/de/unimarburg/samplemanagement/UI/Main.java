@@ -50,7 +50,7 @@ public class Main extends HorizontalLayout {
 
         VerticalLayout welcomeLayout = new VerticalLayout(
                 logo,
-                new Text("Welcome to the Sample Management System"),
+                new Text("Welcome to the Sample Management System. "),
                 new Text("Select an option from the sidebar to get started :)")
         );
         welcomeLayout.setAlignItems(Alignment.CENTER);
