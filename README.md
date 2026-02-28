@@ -5,9 +5,12 @@ This repository contains the code and documentation for the project "Probenmanag
 ## Table of Contents
 
 - [Introduction](#Introduction)
-- [Features](#Featrues)
-- [Installation](#Installation)
-- [Usage](#Usage)
+- [Features](#Features)
+- [Technologies](#Technologies)
+- [Installation and Running](#Installation-and-Running)
+- [Deployment](#Deployment)
+- [Backup and Restore](#Backup-and-Restore)
+- [Testing](#Testing)
 - [Imprint](#Imprint)
 - [License](#License)
 
@@ -29,7 +32,41 @@ The Probenmanagement Software project is designed to facilitate efficient and ef
 - **Generate Report**: Automatically generate a comprehensive report including all sample data and analysis results
 - **Read Results**: This feature lets the user upload an EXCEL-sheet that already includes all the relevant analysis results, in order to streamline the process of entering the analysis data
 
-## Installation
+## Technologies
+
+- **Backend:** Java 17, Spring Boot 3.5.0
+- **Frontend:** Vaadin 24.3.12
+- **Database:** PostgreSQL
+- **Database Migration:** Flyway
+- **Build Tool:** Maven
+- **Containerization:** Docker, Docker Compose
+- **CI/CD:** GitHub Actions
+- **Reverse Proxy:** Nginx
+
+## Installation and Running
+
+### With Docker (Recommended)
+
+The easiest way to run the application is by using Docker Compose.
+
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/Bela4321/Probenmanagement_FoPra.git
+    ```
+2.  Navigate to the project directory:
+    ```bash
+    cd Probenmanagement_FoPra
+    ```
+3.  Run the application:
+    ```bash
+    docker-compose up --build
+    ```
+4.  Open your web browser and navigate to:
+    ```
+    http://localhost:8080
+    ```
+
+### Without Docker
 
 The Usage of an IDE, such as IntelliJ IDEA is recommended when working with the code and repository
 
@@ -52,20 +89,25 @@ mvn clean install
 DB_USER=postgres;DB_PASSWORD=<your Database password>
 ```
 
----
-
-## Usage
-
-To start using the sample management system, follow these steps:
-
-1. Start the application by running the SampleManagementApplication.Java
-2. Open your web browser and navigate to:
+5. Start the application by running the SampleManagementApplication.Java
+6. Open your web browser and navigate to:
     
     ```
     http://localhost:8080
     ```
     
-3. Follow the on-screen instructions to begin managing your samples.
+7. Follow the on-screen instructions to begin managing your samples.
+
+## Deployment
+
+The application is deployed on two servers:
+
+-   **vhrz1:** Development and testing server.
+-   **vhrz2:** Production server.
+
+## Backup and Restore
+
+A snapshot backup of the server is taken once every day at 10:00 AM. The backup is stored on the server itself and is managed by HRZ. After a restoration, Docker and all containers are automatically started.
 
 ## Testing
 
@@ -139,6 +181,9 @@ Kontakt:
 Internet: https://www.uni-marburg.de/de/fb20/bereiche/ziei/virologie<br />
 Telefon: ++49 (0)6421 2865158<br />
 Email: immunmonitoring.labor@uni-marburg.de<br />
+
+Refactoring, Feature-Entwicklung, Dokumentation and Bereitstellung der Software:                                                                                                                                                                                  │
+<br /> Binayak Adhikari: blazebnayak@gmail.com<br />
 
 Gestaltung & technische Realisierung:
 Bela Schinke: bela.schinke@gmail.com<br />
